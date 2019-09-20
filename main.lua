@@ -1,4 +1,4 @@
-message('ChatFilterAddon Loaded!')
+print('ChatFilterAddon Loaded!')
 
 -- most of this is copied from classicLFG addon
 
@@ -16,12 +16,10 @@ end)
 
 
     function ParseMessageCFA(sender, chatMessage, channel)
-	local lowerMessage = string.lower(chatMessage)
+	local lowerMessage = chatMessage:lower()
 	if (HasLFMTagCFA(lowerMessage)) then
-		if (HasDungeonNameCFA(lowerMessage)) then
-            message('Found LFM and dungeon: '+lowerMessage)
-        else
-            message('Found LFM but not dungeon'+lowerMessage)
+		if (HasDungeonAbbreviationCFA(lowerMessage)) then
+           		 print(sender," : ",lowerMessage," : ",channel)
 		end
 	end
 end
@@ -32,6 +30,9 @@ function HasLFMTagCFA(text)
         "lf3m",
         "lf2m",
         "lf1m",
+        "lf1",
+        "lf2",
+        "lf3",
         "looking for more"
     }
     local found = false
@@ -44,10 +45,25 @@ function HasLFMTagCFA(text)
     return found
 end
 
-function HasDungeonNameCFA(message)
-    for dungeonName, dungeon in pairs(DungeonList) do
-        if (string.find(message, ClassicLFG.Locale[dungeonName]:lower())) then
-            return ClassicLFG.DungeonManager.Dungeons[dungeonName]
+function ArrayContainsValueCFA(array, val)
+    for index, value in ipairs(array) do
+        if value == val then
+            return true
+        end
+    end
+    return false
+end
+
+function HasDungeonAbbreviationCFA(chatMessage)
+    local level = UnitLevel("player")
+    for key, dungeon in pairs(GetDungeonsByLevelCFA(level)) do
+        print("After get by level ",dungeon, "abbr: ",dungeon.Abbreviations)
+        for _, abbreviation in pairs(dungeon.Abbreviations) do
+            words = {}
+            for word in chatMessage:gmatch("%w+") do table.insert(words, word) end
+            if (ArrayContainsValueCFA(words, abbreviation)) then
+                return true
+            end
         end
     end
     return nil
@@ -70,6 +86,7 @@ function DefineDungeonCFA(name, size, minLevel, maxLevel, location, abbreviation
 end
 
 function GetDungeonsByLevelCFA(level)
+    print("checking dungeons for level ",level)
     local dungeonsForLevel = {}
     for key in pairs(Dungeons) do
         local dungeon = Dungeons[key]
