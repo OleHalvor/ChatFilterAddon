@@ -26,7 +26,7 @@ end)
                 end
                 local lfgOutputFound = false
                 for i = 1, NUM_CHAT_WINDOWS do
-                    if (GetChatWindowInfo(i)=="lfm") then
+                    if (GetChatWindowInfo(i)=="lfm" or GetChatWindowInfo(i)=="LFM") then
                         lfgOutputFound = true
                         -- don't know how to specify correct chat frame without hard coding. please don't judge me
                         if (i==1) then
@@ -53,7 +53,7 @@ end)
                     end
                 end
                 if (not lfgOutputFound) then
-                    message('Fint ingen chat som heter "LFM" du må lage en for at addonen virker. Du må også ha et chattevindu hvor du joiner World, LookingForGroup, og Global (dette kan ligge passivt i bakgrunnen)')
+                    message('Fint ingen chat som heter "LFM" du må lage en for at addonen virker')
                     hasWarnedAboutChatName = true
                 end
 		end
