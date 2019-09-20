@@ -2,8 +2,8 @@ print('ChatFilterAddon Loaded!')
 
 -- most of this is copied from classicLFG addon
 
-DungeonList = {}
-Dungeons = {}
+local DungeonList = {}
+local Dungeons = {}
 
 local Frame = CreateFrame("frame")
 Frame:RegisterEvent("CHAT_MSG_CHANNEL")
@@ -19,7 +19,10 @@ end)
 	local lowerMessage = chatMessage:lower()
 	if (HasLFMTagCFA(lowerMessage)) then
 		if (HasDungeonAbbreviationCFA(lowerMessage)) then
-           		 print(sender," : ",lowerMessage," : ",channel)
+                local link = "|cffffc0c0|Hplayer:"..sender.."|h["..sender.."]|h|r";
+                local output = (link..": "..chatMessage)
+                ChatFrame6:AddMessage(output)
+                ChatFrame5:AddMessage(output)
 		end
 	end
 end
@@ -33,6 +36,7 @@ function HasLFMTagCFA(text)
         "lf1",
         "lf2",
         "lf3",
+        "lf",
         "looking for more"
     }
     local found = false
@@ -57,7 +61,7 @@ end
 function HasDungeonAbbreviationCFA(chatMessage)
     local level = UnitLevel("player")
     for key, dungeon in pairs(GetDungeonsByLevelCFA(level)) do
-        print("After get by level ",dungeon, "abbr: ",dungeon.Abbreviations)
+    --for key, dungeon in pairs(GetDungeonsByLevelCFA(30)) do
         for _, abbreviation in pairs(dungeon.Abbreviations) do
             words = {}
             for word in chatMessage:gmatch("%w+") do table.insert(words, word) end
@@ -86,12 +90,11 @@ function DefineDungeonCFA(name, size, minLevel, maxLevel, location, abbreviation
 end
 
 function GetDungeonsByLevelCFA(level)
-    print("checking dungeons for level ",level)
     local dungeonsForLevel = {}
     for key in pairs(Dungeons) do
         local dungeon = Dungeons[key]
         if (dungeon.MinLevel <= level and dungeon.MaxLevel >= level) then
-            dungeonsForLevel[dungeon.Name] = dungeon.Name
+            dungeonsForLevel[dungeon.Name] = dungeon
         end
     end
     return dungeonsForLevel
@@ -129,6 +132,10 @@ DefineDungeonCFA("Onyxia's Lair", 40, 60, 60, "Dustwallow Marsh", "ony", {"ony",
 
 
 
+print("Possible dungeons for your level: ")
+for key, dungeon in pairs(GetDungeonsByLevelCFA(UnitLevel("player"))) do
+    print(key)
+end
 
 
 
