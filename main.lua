@@ -95,8 +95,8 @@ end
 
 function HasDungeonAbbreviationCFA(chatMessage)
     local level = UnitLevel("player")
-    --for key, dungeon in pairs(GetDungeonsByLevelCFA(level)) do
-    for key, dungeon in pairs(GetDungeonsByLevelCFA(27)) do
+    for key, dungeon in pairs(GetDungeonsByLevelCFA(level)) do
+    --for key, dungeon in pairs(GetDungeonsByLevelCFA(27)) do
         for _, abbreviation in pairs(dungeon.Abbreviations) do
             words = {}
             for word in chatMessage:gmatch("%w+") do table.insert(words, word) end
