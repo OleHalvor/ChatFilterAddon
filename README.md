@@ -5,7 +5,7 @@ nb: YOU need to create the chat window named LFM yourself. Also make sure you ha
 
 1: Install this addon like you would any other
 
-2: Create a new chat window named "LFM" - the addon outputs everything here
+2: Create a new chat window named "LFM". The name of the chat window is important and needs to be EXACTLY "LFM", as the addon always looks for a windows named "LFM". 
 
 3: Join "world, LookingForMore" etc in a hidden chat window
 
