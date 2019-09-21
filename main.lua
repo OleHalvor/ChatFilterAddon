@@ -1,4 +1,4 @@
-print('ChatFilterAddon Loaded!')
+print('ChatFilterAddon Loaded! - develop branch')
 
 -- most of this is copied from classicLFG addon
 
@@ -11,7 +11,6 @@ Frame:SetScript("OnEvent", function(_, event, ...)
         if (event == "CHAT_MSG_CHANNEL") then
             local message, player, _, _, _, _, _, _, channelName = ...
             ParseMessageCFA(player, message, channelName)
-            lastMessage = message
         end
 end)
 
@@ -20,7 +19,8 @@ end)
 	if (HasLFMTagCFA(lowerMessage)) then
 		if (HasDungeonAbbreviationCFA(lowerMessage)) then
                 local link = "|cffffc0c0|Hplayer:"..sender.."|h["..sender.."]|h|r";
-                local output = (link..": "..chatMessage)
+                local hours,minutes = GetGameTime();
+                local output = ("["..hours..":"..minutes.."] "..link..": "..chatMessage.." ["..channel.."]")
                 if (chatMessage == lastMessage) then
                     return false
                 end
@@ -53,9 +53,10 @@ end)
                     end
                 end
                 if (not lfgOutputFound) then
-                    message('Fint ingen chat som heter "LFM" du må lage en for at addonen virker')
+                    message('Did not find any chat windows named "LFG", please create one')
                     hasWarnedAboutChatName = true
                 end
+                lastMessage = chatMessage
 		end
 	end
 end
@@ -73,8 +74,12 @@ function HasLFMTagCFA(text)
         "looking for more"
     }
     for _, tag in pairs(lfmTags) do
-        if (tag=="lf" and not string.find(text,"lfg")) then
-            return true
+
+        if (tag=="lf") then
+            if (not string.find(text,"lfg")) then
+                return true
+            end
+
         else
             if (string.find(text, tag)) then
                 return true
