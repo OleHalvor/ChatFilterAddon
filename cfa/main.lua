@@ -1,6 +1,6 @@
 print('ChatFilterAddon Loaded!')
 
--- most of this is copied from classicLFG addon
+-- a lot of this code is copied from classicLFG addon
 
 local DungeonList = {}
 local Dungeons = {}
