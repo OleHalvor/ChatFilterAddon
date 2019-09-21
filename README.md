@@ -3,7 +3,7 @@ This addon scans all incomming messages in all channels you have joined, looks f
 
 
 1. Install this addon like you would any other
-2. Create a new chat window named "LFM". The name of the chat window is important and needs to be EXACTLY "LFM", as the addon always looks for a windows named "LFM". 
+2. Create a new chat window named "LFM". The name of the chat window is important and needs to be EXACTLY "LFM", as the addon always looks for a windows named LFM. 
 3. Join "world, LookingForMore" etc in a hidden chat window
 4. Enjoy a cleaner channel without spam for dungeons you can't join :)
 
