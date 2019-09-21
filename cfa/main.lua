@@ -53,7 +53,7 @@ end)
                     end
                 end
                 if (not lfgOutputFound) then
-                    message('Did not find any chat windows named "LFG", please create one')
+                    message('Did not find any chat windows named "LFM", please create one')
                     hasWarnedAboutChatName = true
                 end
                 lastMessage = chatMessage
