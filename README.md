@@ -11,3 +11,9 @@ nb: YOU need to create the chat window named LFM yourself. Also make sure you ha
 
 4: Enjoy a cleaner channel without spam for dungeons you can't join :)
 
+
+Troubleshooting:
+If it doesn't seem to be working
+A) Make sure you have joined channels where people ask for dungeons
+B) Make sure you have made a chat windows named "LFM"
+C) Make sure you have joined relevant channels like "world" and "LookingForMore". You can go into the settings and un-check them, the addon works as long as you have joined them, and not left
