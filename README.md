@@ -12,7 +12,10 @@ nb: YOU need to create the chat window named LFM yourself. Also make sure you ha
 4: Enjoy a cleaner channel without spam for dungeons you can't join :)
 
 
+
+
 Troubleshooting:
+
 
 If it doesn't seem to be working
 
