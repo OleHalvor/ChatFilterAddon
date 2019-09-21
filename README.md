@@ -9,5 +9,5 @@ nb: YOU need to create the chat window named LFM yourself. Also make sure you ha
 
 3: Join "world, LookingForMore" etc in a hidden chat window
 
-4: Profit
+4: Enjoy a cleaner channel without spam for dungeons you can't join :)
 
