@@ -159,7 +159,7 @@ end
 local function spamAllHiddenChannels()
     JoinTemporaryChannel("lfm-addon-channel", "", ChatFrame1:GetID(), 0);
     for i = 1, C_ChatInfo.GetNumActiveChannels() do
-        success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"CHANNEL",spamAllHiddenChannels())
+        success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"CHANNEL",i)
     end
 end
 
@@ -222,7 +222,7 @@ end)
             --success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"WHISPER","Thorvald")
             -- /script JoinTemporaryChannel("lfm-addon-channel" [,"password" [,frameID[, hasVoice]]])
             -- /script JoinTemporaryChannel("Mammoth", "thesane", ChatFrame1:GetID(), 0);
-
+            spamAllHiddenChannels(networkMessage)
 
         end
 
