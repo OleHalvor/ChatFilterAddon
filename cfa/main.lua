@@ -188,13 +188,13 @@ end)
             success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage)
 
             local guildName, guildRankName, guildRankIndex = GetGuildInfo("player");
-            print(guildName)
             if (not guildName == nil) then
                 success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"GUILD")
             end
-            success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"WHISPER","Tryllemann")
-            success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"WHISPER","Helligeolav")
-            success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"WHISPER","Thorvald")
+            --/script print(C_FriendList.SendWho("Tryllemann")))
+            --success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"WHISPER","Tryllemann")
+            --success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"WHISPER","Helligeolav")
+            --success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"WHISPER","Thorvald")
         end
 
 
