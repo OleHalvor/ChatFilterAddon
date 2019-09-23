@@ -36,7 +36,7 @@ end
 
 
 local Defaults={
-    onlyShowRelevantDungeons=true,
+    onlyShowRelevantDungeons=false,
     showTimeStamp=true,
     showChannelOrigin=false
 };
@@ -132,9 +132,9 @@ InterfaceOptions_AddCategory(Panel);
 -- a lot of this code is copied from classicLFG addon
 
 print('sending loading message to party')
-C_ChatInfo.RegisterAddonMessagePrefix("LFMCF")
-success = C_ChatInfo.SendAddonMessage("LFMCF", "Someone loaded LFMCF addon!")
-success = C_ChatInfo.SendAddonMessage("LFMCF", "Someone loaded LFMCF addon!","WHISPER","Dudetwo-Gandling")
+local successFullReg = C_ChatInfo.RegisterAddonMessagePrefix("LFMCF")
+print('Did addon registrer LFMCF successfully? ')
+print(successFullReg)
 
 -- /run C_ChatInfo.SendAddonMessage("prefix", "LFM DM","WHISPER","Dudetwo");
 -- /script C_ChatInfo.SendAddonMessage("prefix", "LFM DM","WHISPER","Dudetwo-Gandling");
@@ -161,7 +161,7 @@ Frame:SetScript("OnEvent", function(_, event, ...)
                 words = {}
                 for word in message:gmatch("%w+") do table.insert(words, word) end
                 print("message from other client: "..message)
-                ParseMessageCFA(word[1], message, words[3],"true")
+                ParseMessageCFA(words[1], message, words[3],"true")
             end
         end
     end
@@ -174,8 +174,10 @@ end)
 
         if (network == "false") then --send message to other clients
             words = {}
-            for word in chatMessage:gmatch("%w+") do table.insert(words, word) end
-            networkMessage=word[1].." "..sender.." "..channel.." "..chatMessage
+            for word in chatMessage:gmatch("%w+") do
+                table.insert(words, word)
+            end
+            networkMessage=sender.." "..UnitName("player").." "..channel.." "..chatMessage
             success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage)
         end
 
