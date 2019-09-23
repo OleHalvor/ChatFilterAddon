@@ -11,9 +11,7 @@ This addon scans all incomming messages in all channels you have joined, looks f
 
 
 
-NB: YOU need to create the chat window named LFM yourself. Also make sure you have joined World and LookingForMore channels. These channels does not need to be displayed in an active widow, you can enter settings of your chat window and un-check the channels if you want.
-
-
+NB: YOU need to create the chat window named LFM yourself
 
 ### Troubleshooting
 
