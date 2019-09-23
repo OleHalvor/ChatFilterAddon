@@ -36,7 +36,7 @@ end
 
 
 local Defaults={
-    onlyShowRelevantDungeons=false,
+    onlyShowRelevantDungeons=true,
     showTimeStamp=true,
     showChannelOrigin=false
 };
@@ -164,15 +164,14 @@ Frame:SetScript("OnEvent", function(_, event, ...)
         ParseMessageCFA(player, message, channelName,"false")
     end
 
-
     if (event == "CHAT_MSG_ADDON") then
         local prefix, message, type, sender, _, _, _, _, _ = ...
         if (prefix=="LFMCF") then
             if ( not (UnitName("player")==sender or UnitName("player")..'-Gandling'==sender) ) then
                 words = mysplit(message,";")
-                print("message from "..words[2]..": "..message)
-                parseMessage =""
-                ParseMessageCFA(words[1], words[4], words[3],"true")
+               -- print("message from "..words[2]..": "..message)
+                channelPlusNetworkSender=words[3].."-"..words[2]
+                ParseMessageCFA(words[1], words[4], channelPlusNetworkSender,"true")
             end
         end
     end
