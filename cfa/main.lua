@@ -139,7 +139,7 @@ local successFullReg = C_ChatInfo.RegisterAddonMessagePrefix("LFMCF")
 -- /script SendAddonMessage("LFMCF", "LFM DM", "WHISPER", "Dudetwo-Gandling");
 
 local function getLFMAddonChannelIndex()
-    numberOfChannels = GetNumGroupChannels()
+    numberOfChannels = C_ChatInfo.GetNumActiveChannels()
     print("number of channels: ")
     print(numberOfChannels)
     lfmAddonChannelIndex = 0
@@ -154,6 +154,13 @@ local function getLFMAddonChannelIndex()
         print('joining lfm-addon-channel')
     end
     return lfmAddonChannelIndex
+end
+
+local function spamAllHiddenChannels()
+    JoinTemporaryChannel("lfm-addon-channel", "", ChatFrame1:GetID(), 0);
+    for i = 1, C_ChatInfo.GetNumActiveChannels() do
+        success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"CHANNEL",spamAllHiddenChannels())
+    end
 end
 
 local function mysplit (inputstr, sep)
@@ -215,7 +222,7 @@ end)
             --success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"WHISPER","Thorvald")
             -- /script JoinTemporaryChannel("lfm-addon-channel" [,"password" [,frameID[, hasVoice]]])
             -- /script JoinTemporaryChannel("Mammoth", "thesane", ChatFrame1:GetID(), 0);
-            success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"CHANNEL",getLFMAddonChannelIndex())
+
 
         end
 
