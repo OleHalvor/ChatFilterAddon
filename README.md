@@ -3,10 +3,11 @@ This addon scans all incomming messages in all channels you have joined, looks f
 
 ### How to use
 
-1. Install this addon like you would any other
-2. Create a new chat window named "LFM". The name of the chat window is important and needs to be EXACTLY "LFM", as the addon always looks for a window named LFM. 
-3. Join "world, LookingForMore" etc in a chat window (can be hidden)
-4. Enjoy a cleaner channel without spam for dungeons you can't join :)
+1. put the 'cfa' folder into you interface/addons/ folder
+2. activate it in the addon menu before loggin into your character
+3. Create a new chat window named "LFM". The name of the chat window is important and needs to be EXACTLY "LFM", as the addon always looks for a window named LFM. 
+4. Join "world, LookingForMore" etc in a chat window (can be hidden)
+Enjoy a cleaner channel without spam for dungeons you can't join :)
 
 
 
