@@ -1,5 +1,6 @@
 print('ChatFilterAddon Loaded! - develop branch')
 
+SendAddonMessage("LFMCF", "Somebody loaded the plugin!", "PARTY");
 
 local Name,AddOn=...;
 local Title=select(2,GetAddOnInfo(Name));
