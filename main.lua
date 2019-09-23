@@ -178,6 +178,7 @@ local function mysplit (inputstr, sep)
     return t
 end
 
+local hasWarnedAboutChatName = false
 local DungeonList = {}
 local Dungeons = {}
 local lastMessage = ""
@@ -274,7 +275,7 @@ end)
                      end
                 end
             end
-            if (not lfgOutputFound) then
+            if (not lfgOutputFound and not hasWarnedAboutChatName) then
                 message('Did not find any chat windows named "LFM", please create one')
                 hasWarnedAboutChatName = true
             end
