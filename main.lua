@@ -148,10 +148,11 @@ Frame:SetScript("OnEvent", function(_, event, ...)
     end
     if (event == "CHAT_MSG_ADDON") then
         local prefix, message, type, sender, _, _, _, _, _ = ...
+        print('received '..prefix..message..type..sender)
         if (prefix=="LFMCF") then
             if ( not UnitName("player")==sender) then
                 print("message from other client: "..message)
-                ParseMessageCFA("tryllemann", message, channelName)
+                ParseMessageCFA("tryllemann", message, "channelName")
             else
                 print("meldinga kom fra meg")
             end
