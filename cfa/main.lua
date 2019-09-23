@@ -1,4 +1,4 @@
-print('ChatFilterAddon Loaded! - develop branch')
+print('ChatFilterAddon Loaded!')
 
 
 local Name,AddOn=...;
@@ -189,6 +189,8 @@ end)
             end
             networkMessage=sender..";"..UnitName("player")..";"..channel..";"..chatMessage
             success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage)
+            success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"GUILD")
+            success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"WHISPER","Tryllemann")
         end
 
 
