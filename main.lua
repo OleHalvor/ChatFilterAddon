@@ -141,6 +141,17 @@ print(successFullReg)
 -- /script SendChatMessage("melding" ,"WHISPER" ,"COMMON" ,"Dudetwo-Gandling");
 -- /script SendAddonMessage("LFMCF", "LFM DM", "WHISPER", "Dudetwo-Gandling");
 
+local function mysplit (inputstr, sep)
+    if sep == nil then
+        sep = "%s"
+    end
+    local t={}
+    for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
+        table.insert(t, inputstr)
+    end
+    return t
+end
+
 local DungeonList = {}
 local Dungeons = {}
 local lastMessage = ""
@@ -158,10 +169,10 @@ Frame:SetScript("OnEvent", function(_, event, ...)
         local prefix, message, type, sender, _, _, _, _, _ = ...
         if (prefix=="LFMCF") then
             if ( not (UnitName("player")==sender or UnitName("player")..'-Gandling'==sender) ) then
-                words = {}
-                for word in message:gmatch("%w+") do table.insert(words, word) end
-                print("message from other client: "..message)
-                ParseMessageCFA(words[1], message, words[3],"true")
+                words = mysplit(message,";")
+                print("message from "..words[2]..": "..message)
+                parseMessage =""
+                ParseMessageCFA(words[1], words[4], words[3],"true")
             end
         end
     end
@@ -177,7 +188,7 @@ end)
             for word in chatMessage:gmatch("%w+") do
                 table.insert(words, word)
             end
-            networkMessage=sender.." "..UnitName("player").." "..channel.." "..chatMessage
+            networkMessage=sender..";"..UnitName("player")..";"..channel..";"..chatMessage
             success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage)
         end
 
