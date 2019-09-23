@@ -147,7 +147,7 @@ local function mysplit (inputstr, sep)
     end
     local t={}
     for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
-        table.insert(t, inputstr)
+        table.insert(t, str)
     end
     return t
 end
