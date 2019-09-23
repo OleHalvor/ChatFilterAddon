@@ -133,7 +133,7 @@ InterfaceOptions_AddCategory(Panel);
 
 print('sending loading message to party')
 
-success = C_ChatInfo.SendAddonMessage("prefix", "message")
+success = C_ChatInfo.SendAddonMessage("LFMCF", "Someone loaded LFMCF addon!")
 
 local DungeonList = {}
 local Dungeons = {}
@@ -148,14 +148,23 @@ Frame:SetScript("OnEvent", function(_, event, ...)
     end
     if (event == "CHAT_MSG_ADDON") then
         local prefix, message, type, sender, _, _, _, _, _ = ...
-        print("message from other client: "..message)
-        ParseMessageCFA("tryllemann", message, channelName)
+        if (prefix=="LFMCF") then
+            if ( not UnitName("player")==sender) then
+                print("message from other client: "..message)
+                ParseMessageCFA("tryllemann", message, channelName)
+            else
+                print("meldinga kom fra meg")
+            end
+        else
+            print('not this addon')
+        end
     end
 end)
 
     function ParseMessageCFA(sender, chatMessage, channel)
 	local lowerMessage = chatMessage:lower()
 	if (HasLFMTagCFA(lowerMessage)) then
+        success = C_ChatInfo.SendAddonMessage("LFMCF", chatMessage)
         if (HasDungeonAbbreviationCFA(lowerMessage)) then
             local link = "|cffffc0c0|Hplayer:"..sender.."|h["..sender.."]|h|r";
             local output = ""
