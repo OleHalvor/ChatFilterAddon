@@ -157,11 +157,11 @@ local function getLFMAddonChannelIndex()
 end
 
 local function spamAllHiddenChannels()
-    JoinChannelByName("lfmaddonchannel", "", ChatFrame1:GetID(), 0);
+    JoinChannelByName("LfmAddonChannel", "", ChatFrame1:GetID(), 0);
 
     for i = 1, GetNumDisplayChannels() do
         id, name = GetChannelName(i);
-        if(name=="lfmaddonchannel") then
+        if(name=="LfmAddonChannel") then
             C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"CHANNEL",i)
         end
     end
