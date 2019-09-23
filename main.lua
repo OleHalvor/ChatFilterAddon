@@ -1,6 +1,5 @@
 print('ChatFilterAddon Loaded! - develop branch')
 
-SendAddonMessage("LFMCF", "Somebody loaded the plugin!", "PARTY");
 
 local Name,AddOn=...;
 local Title=select(2,GetAddOnInfo(Name));
@@ -132,16 +131,26 @@ end
 InterfaceOptions_AddCategory(Panel);
 -- a lot of this code is copied from classicLFG addon
 
+print('sending loading message to party')
+
+success = C_ChatInfo.SendAddonMessage("prefix", "message")
+
 local DungeonList = {}
 local Dungeons = {}
 local lastMessage = ""
 local Frame = CreateFrame("frame")
 Frame:RegisterEvent("CHAT_MSG_CHANNEL")
+Frame:RegisterEvent("CHAT_MSG_ADDON")
 Frame:SetScript("OnEvent", function(_, event, ...)
-        if (event == "CHAT_MSG_CHANNEL") then
-            local message, player, _, _, _, _, _, _, channelName = ...
-            ParseMessageCFA(player, message, channelName)
-        end
+    if (event == "CHAT_MSG_CHANNEL") then
+        local message, player, _, _, _, _, _, _, channelName = ...
+        ParseMessageCFA(player, message, channelName)
+    end
+    if (event == "CHAT_MSG_ADDON") then
+        local prefix, message, type, sender, _, _, _, _, _ = ...
+        print("message from other client: "..message)
+        ParseMessageCFA("tryllemann", message, channelName)
+    end
 end)
 
     function ParseMessageCFA(sender, chatMessage, channel)
