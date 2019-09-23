@@ -189,8 +189,13 @@ end)
             end
             networkMessage=sender..";"..UnitName("player")..";"..channel..";"..chatMessage
             success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage)
-            success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"GUILD")
+            guildName, guildRankName, guildRankIndex = GetGuildInfo(unit);
+            if (not GetGuildInfo("player") == nil) then
+                success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"GUILD")
+            end
             success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"WHISPER","Tryllemann")
+            success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"WHISPER","Helligeolav")
+            success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"WHISPER","Thorvald")
         end
 
 
