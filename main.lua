@@ -27,11 +27,20 @@ local function SyncOptions(new,old,merge)
     return new;
 end
 
+function try(f, catch_f)
+    local status, exception = pcall(f)
+    if not status then
+        catch_f(exception)
+    end
+end
+
+
 local Defaults={
     onlyShowRelevantDungeons=true,
     showTimeStamp=true,
-    showChannel=false,
+    showChannelOrigin=false
 };
+
 ChatFilterAddon_Options=SyncOptions(Options,Defaults);
 
 --------------------------
@@ -92,6 +101,9 @@ do--	LinkButtons
     for i,j in ipairs(list) do
         BuildButton(Changes,j,nil,16,-i*24-24);
     end
+
+
+
 end
 
 --------------------------
@@ -142,7 +154,7 @@ end)
                 output = (output.."["..hours..":"..minutes.."] ")
             end
             output = output..link..": "..chatMessage
-            if (Options.showChannel) then
+            if (Options.showChannelOrigin) then
                 output = output.." ["..channel.."]";
             end
 
@@ -260,8 +272,13 @@ function GetDungeonsByLevelCFA(level)
     local dungeonsForLevel = {}
     for key in pairs(Dungeons) do
         local dungeon = Dungeons[key]
-        if (dungeon.MinLevel <= level and dungeon.MaxLevel >= level) then
+        if (Options[dungeon.abbreviation]==true) then
+            print('matching '..dungeon.abbreviation..' because of options')
             dungeonsForLevel[dungeon.Name] = dungeon
+        else
+            if (dungeon.MinLevel <= level and dungeon.MaxLevel >= level) then
+                dungeonsForLevel[dungeon.Name] = dungeon
+            end
         end
     end
     return dungeonsForLevel
@@ -301,14 +318,6 @@ print("Possible dungeons for your level: ")
 for key, dungeon in pairs(GetDungeonsByLevelCFA(UnitLevel("player"))) do
     print(key)
 end
-
-
-
-
-
-
-
-
 
 
 
