@@ -9,10 +9,10 @@ This addon scans all incomming messages in all channels you have joined, looks f
 4. Join "world, LookingForMore" etc in a chat window (can be hidden)
 Enjoy a cleaner channel without spam for dungeons you can't join :)
 
-
-
-
 NB: YOU need to create the chat window named LFM yourself
+
+## Update 0.3
+- The addon now forwards LFM messages to a dedicated channel, and scans this channel as well. This means everyone with this addon will be able to se relevant LFM messages from all channels all players are in. For example: If _one_ player with this addon is in a town and someone writes "LFM DM" in Trade - City, every level 18-24 player with this addon will see the message.
 
 ### Troubleshooting
 
