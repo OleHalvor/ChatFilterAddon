@@ -131,21 +131,67 @@ end
 InterfaceOptions_AddCategory(Panel);
 -- a lot of this code is copied from classicLFG addon
 
+print('sending loading message to party')
+local successFullReg = C_ChatInfo.RegisterAddonMessagePrefix("LFMCF")
+print('Did addon registrer LFMCF successfully? ')
+print(successFullReg)
+
+-- /run C_ChatInfo.SendAddonMessage("prefix", "LFM DM","WHISPER","Dudetwo");
+-- /script C_ChatInfo.SendAddonMessage("prefix", "LFM DM","WHISPER","Dudetwo-Gandling");
+-- /script SendChatMessage("melding" ,"WHISPER" ,"COMMON" ,"Dudetwo-Gandling");
+-- /script SendAddonMessage("LFMCF", "LFM DM", "WHISPER", "Dudetwo-Gandling");
+
+local function mysplit (inputstr, sep)
+    if sep == nil then
+        sep = "%s"
+    end
+    local t={}
+    for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
+        table.insert(t, str)
+    end
+    return t
+end
+
 local DungeonList = {}
 local Dungeons = {}
 local lastMessage = ""
 local Frame = CreateFrame("frame")
 Frame:RegisterEvent("CHAT_MSG_CHANNEL")
+Frame:RegisterEvent("CHAT_MSG_ADDON")
 Frame:SetScript("OnEvent", function(_, event, ...)
-        if (event == "CHAT_MSG_CHANNEL") then
-            local message, player, _, _, _, _, _, _, channelName = ...
-            ParseMessageCFA(player, message, channelName)
+    if (event == "CHAT_MSG_CHANNEL") then
+        local message, player, _, _, _, _, _, _, channelName = ...
+        ParseMessageCFA(player, message, channelName,"false")
+    end
+
+    if (event == "CHAT_MSG_ADDON") then
+        local prefix, message, type, sender, _, _, _, _, _ = ...
+        if (prefix=="LFMCF") then
+            if ( not (UnitName("player")==sender or UnitName("player")..'-Gandling'==sender) ) then
+                words = mysplit(message,";")
+               -- print("message from "..words[2]..": "..message)
+                channelPlusNetworkSender=words[3].."-"..words[2]
+                ParseMessageCFA(words[1], words[4], channelPlusNetworkSender,"true")
+            end
         end
+    end
+
 end)
 
-    function ParseMessageCFA(sender, chatMessage, channel)
+    function ParseMessageCFA(sender, chatMessage, channel,network)
 	local lowerMessage = chatMessage:lower()
 	if (HasLFMTagCFA(lowerMessage)) then
+
+        if (network == "false") then --send message to other clients
+            words = {}
+            for word in chatMessage:gmatch("%w+") do
+                table.insert(words, word)
+            end
+            networkMessage=sender..";"..UnitName("player")..";"..channel..";"..chatMessage
+            success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage)
+        end
+
+
         if (HasDungeonAbbreviationCFA(lowerMessage)) then
             local link = "|cffffc0c0|Hplayer:"..sender.."|h["..sender.."]|h|r";
             local output = ""
