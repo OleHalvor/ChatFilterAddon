@@ -131,10 +131,7 @@ end
 InterfaceOptions_AddCategory(Panel);
 -- a lot of this code is copied from classicLFG addon
 
-print('sending loading message to party')
 local successFullReg = C_ChatInfo.RegisterAddonMessagePrefix("LFMCF")
-print('Did addon registrer LFMCF successfully? ')
-print(successFullReg)
 
 -- /run C_ChatInfo.SendAddonMessage("prefix", "LFM DM","WHISPER","Dudetwo");
 -- /script C_ChatInfo.SendAddonMessage("prefix", "LFM DM","WHISPER","Dudetwo-Gandling");
@@ -170,7 +167,7 @@ Frame:SetScript("OnEvent", function(_, event, ...)
             if ( not (UnitName("player")==sender or UnitName("player")..'-Gandling'==sender) ) then
                 words = mysplit(message,";")
                -- print("message from "..words[2]..": "..message)
-                channelPlusNetworkSender=words[3].."-"..words[2]
+                channelPlusNetworkSender=words[3].." - "..words[2]
                 ParseMessageCFA(words[1], words[4], channelPlusNetworkSender,"true")
             end
         end
@@ -189,8 +186,10 @@ end)
             end
             networkMessage=sender..";"..UnitName("player")..";"..channel..";"..chatMessage
             success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage)
-            guildName, guildRankName, guildRankIndex = GetGuildInfo(unit);
-            if (not GetGuildInfo("player") == nil) then
+
+            local guildName, guildRankName, guildRankIndex = GetGuildInfo("player");
+            print(guildName)
+            if (not guildName == nil) then
                 success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"GUILD")
             end
             success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"WHISPER","Tryllemann")
