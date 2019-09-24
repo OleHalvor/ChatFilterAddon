@@ -178,6 +178,12 @@ local function mysplit (inputstr, sep)
     return t
 end
 
+local function tablelength(T)
+    local count = 0
+    for _ in pairs(T) do count = count + 1 end
+    return count
+end
+
 local hasWarnedAboutChatName = false
 local DungeonList = {}
 local Dungeons = {}
@@ -198,14 +204,25 @@ Frame:SetScript("OnEvent", function(_, event, ...)
                 words = mysplit(message,";")
                -- print("message from "..words[2]..": "..message)
                 channelPlusNetworkSender=words[3].." - "..words[2]
-                ParseMessageCFA(words[1], words[4], channelPlusNetworkSender,"true")
+                if (tablelength(words) >= 4) then
+                    ParseMessageCFA(words[1], words[4], channelPlusNetworkSender,"true")
+                else
+                    print('received message which did not parse? '..message)
+                end
             end
         end
     end
-
 end)
 
-    function ParseMessageCFA(sender, chatMessage, channel,network)
+
+
+
+
+
+function ParseMessageCFA(sender, chatMessage, channel,network)
+    if (chatMessage == lastMessage) then
+        return false
+    end
 	local lowerMessage = chatMessage:lower()
 	if (HasLFMTagCFA(lowerMessage)) then
 
@@ -221,14 +238,7 @@ end)
             if (not guildName == nil) then
                 success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"GUILD")
             end
-            --/script print(C_FriendList.SendWho("Tryllemann")))
-            --success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"WHISPER","Tryllemann")
-            --success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"WHISPER","Helligeolav")
-            --success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"WHISPER","Thorvald")
-            -- /script JoinTemporaryChannel("lfm-addon-channel" [,"password" [,frameID[, hasVoice]]])
-            -- /script JoinTemporaryChannel("Mammoth", "thesane", ChatFrame1:GetID(), 0);
             spamAllHiddenChannels(networkMessage)
-
         end
 
 
@@ -244,9 +254,7 @@ end)
                 output = output.." ["..channel.."]";
             end
 
-            if (chatMessage == lastMessage) then
-                return false
-            end
+
             local lfgOutputFound = false
             for i = 1, NUM_CHAT_WINDOWS do
                 if (GetChatWindowInfo(i)=="lfm" or GetChatWindowInfo(i)=="LFM") then
