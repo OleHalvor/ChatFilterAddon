@@ -3,13 +3,12 @@ This addon scans all incomming messages in all channels you have joined, looks f
 
 ### How to use
 
-1. Press "Clone or Download" on this page, choose "Download ZIP"
-2. Extract "ChatFilterAddon-Master" into interface/addons/ folder
-2.5 Remove "-master" from folder name
-2. activate it in the addon menu before loggin into your character
-3. Create a new chat window named "LFM". The name of the chat window is important and needs to be EXACTLY "LFM", as the addon always looks for a window named LFM. 
-Optional: Join "world, LookingForMore" etc in a chat window (can be hidden)
-Enjoy a cleaner channel without spam for dungeons you can't join :)
+1. Download the latest version from: https://github.com/OleHalvor/ChatFilterAddon/releases
+2. Extract "ChatFilterAddon" into interface/addons/ folder
+3. activate it in the addon menu before loggin into your character
+4. Create a new chat window named "LFM".
+5. Optional: Join "world, LookingForMore" etc in a chat window (can be hidden)
+#### Enjoy a cleaner channel without spam for dungeons you can't join :)
 
 NB: YOU need to create the chat window named LFM yourself
 
@@ -19,7 +18,7 @@ NB: YOU need to create the chat window named LFM yourself
 ### Troubleshooting
 
 If it doesn't seem to be working
-
+- Make sure the folder in you Addon folder is named "ChatFilterAddon" not "ChatFilterAddon-master"
 - Make sure you have made a chat window named "LFM"
 - Make sure you have joined relevant channels like "world" and "LookingForMore". You can go into the settings and un-check them, the addon works as long as you have joined them, and not left
 
