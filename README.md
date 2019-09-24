@@ -19,7 +19,7 @@ NB: YOU need to create the chat window named LFM yourself
 ### Troubleshooting
 
 If it doesn't seem to be working
-
+- Make sure the folder in you Addon folder is named "ChatFilterAddon" not "ChatFilterAddon-master"
 - Make sure you have made a chat window named "LFM"
 - Make sure you have joined relevant channels like "world" and "LookingForMore". You can go into the settings and un-check them, the addon works as long as you have joined them, and not left
 
