@@ -3,9 +3,8 @@ This addon scans all incomming messages in all channels you have joined, looks f
 
 ### How to use
 
-1. Press "Clone or Download" on this page, choose "Download ZIP"
-2. Extract "ChatFilterAddon-Master" into interface/addons/ folder
-2. Remove "-master" from folder name
+1. Download the latest version from: https://github.com/OleHalvor/ChatFilterAddon/releases
+2. Extract "ChatFilterAddon" into interface/addons/ folder
 3. activate it in the addon menu before loggin into your character
 4. Create a new chat window named "LFM".
 5. Optional: Join "world, LookingForMore" etc in a chat window (can be hidden)
