@@ -36,11 +36,11 @@ end
 
 
 local Defaults={
-    onlyShowRelevantDungeons=false,
+    onlyShowRelevantDungeons=true,
     showTimeStamp=true,
-    showChannelOrigin=true,
-    showRunsForXP=false,
-    showCleaveRuns=false
+    showChannelOrigin=false,
+    showRunsForXP=true,
+    showCleaveRuns=true
 };
 
 ChatFilterAddon_Options=SyncOptions(Options,Defaults);
@@ -461,7 +461,7 @@ DefineDungeonCFA("Upper Blackrock Spire", 10, 55, 60, "Blackrock Mountain", "ubr
 DefineDungeonCFA("Stratholme", 5, 56, 60, "Eastern Plaguelands", "strat", {"strat","stratholme","start","living","ud","undead"})
 DefineDungeonCFA("Scholomance", 5, 56, 60, "Eastern Plaguelands", "scholo", {"scholo","scholomance"})
 DefineDungeonCFA("Molten Core", 40, 60, 60, "Blackrock Depths", "mc", {"mc","molten core"})
-DefineDungeonCFA("Onyxia's Lair", 40, 60, 60, "Dustwallow Marsh", "ony", {"ony", "onyxia","onyxia's lair})
+DefineDungeonCFA("Onyxia's Lair", 40, 60, 60, "Dustwallow Marsh", "ony", {"ony", "onyxia","onyxia's lair"})
 
 print("Possible dungeons for your level: ")
 for key, dungeon in pairs(GetDungeonsByLevelCFA(UnitLevel("player"))) do
