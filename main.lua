@@ -138,6 +138,25 @@ local successFullReg = C_ChatInfo.RegisterAddonMessagePrefix("LFMCF")
 -- /script SendChatMessage("melding" ,"WHISPER" ,"COMMON" ,"Dudetwo-Gandling");
 -- /script SendAddonMessage("LFMCF", "LFM DM", "WHISPER", "Dudetwo-Gandling");
 
+
+local function getQuestsInLog()
+    quests = {}
+    for i=1, GetNumQuestLogEntries() do
+        quests[i] = GetQuestLogTitle(i);
+    end
+    return quests
+end
+
+local function isQuestFromLogInText(text)
+    quests = getQuestsInLog();
+    for _, quest in pairs(quests) do
+        if (string.find(text:lower(),quest:lower() )) then
+            return true
+        end
+    end
+    return false
+end
+
 local function getLFMAddonChannelIndex()
     numberOfChannels = C_ChatInfo.GetNumActiveChannels()
     print("number of channels: ")
@@ -224,7 +243,7 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
         return false
     end
 	local lowerMessage = chatMessage:lower()
-	if (HasLFMTagCFA(lowerMessage)) then
+	if (HasLFMTagCFA(lowerMessage)) or (isQuestFromLogInText(lowerMessage)) then
 
         if (network == "false") then --send message to other clients
             words = {}
@@ -241,8 +260,7 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
             spamAllHiddenChannels(networkMessage)
         end
 
-
-        if (HasDungeonAbbreviationCFA(lowerMessage)) then
+        if (HasDungeonAbbreviationCFA(lowerMessage)) or (isQuestFromLogInText(lowerMessage)) then
             local link = "|cffffc0c0|Hplayer:"..sender.."|h["..sender.."]|h|r";
             local output = ""
             if (Options.showTimeStamp) then
@@ -253,8 +271,6 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
             if (Options.showChannelOrigin) then
                 output = output.." ["..channel.."]";
             end
-
-
             local lfgOutputFound = false
             for i = 1, NUM_CHAT_WINDOWS do
                 if (GetChatWindowInfo(i)=="lfm" or GetChatWindowInfo(i)=="LFM") then
