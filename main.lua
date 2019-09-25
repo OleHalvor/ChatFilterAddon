@@ -1,5 +1,31 @@
 print('ChatFilterAddon Loaded!')
 
+local messageList = {"melding -2", "melding -1", "melding 0", "melding 1", "melding 2", "melding 3"}
+local messageListSize = 0 -- this is calculated, size is defined by array above
+for _ in pairs(messageList) do messageListSize = messageListSize + 1 end
+local lastMessageListUpdateTime = time()
+local messageListClearInterval = 30
+
+local function pushToMessageList (message)
+    local tableLengthInt = 0
+    for _ in pairs(messageList) do tableLengthInt = tableLengthInt + 1 end
+    if (tableLengthInt >= messageListSize) then
+        for i=1, (tableLengthInt-1) do
+            messageList[i] = messageList[i+1]
+        end
+    end
+    messageList[tableLengthInt] = message
+    return messageList
+end
+
+local function printMessageList()
+    local tableLengthInt = 0
+    for _ in pairs(messageList) do tableLengthInt = tableLengthInt + 1 end
+    print('printing message list: ')
+    for i = 1, tableLengthInt do
+        print('message '..i..': '..messageList[i])
+    end
+end
 
 local Name,AddOn=...;
 local Title=select(2,GetAddOnInfo(Name));
@@ -33,6 +59,8 @@ function try(f, catch_f)
         catch_f(exception)
     end
 end
+
+
 
 
 local Defaults={
@@ -269,10 +297,26 @@ Frame:SetScript("OnEvent", function(_, event, ...)
     end
 end)
 
+
+
 function ParseMessageCFA(sender, chatMessage, channel,network)
-    if (chatMessage == lastMessage) then
-        return false
+
+    if (lastMessageListUpdateTime + messageListClearInterval < time()) then
+        for i = 1, messageListSize do
+            messageList[i] = i
+        end
+        lastMessageListUpdateTime = time()
     end
+
+    local messageListActualSize = 0
+    for _ in pairs(messageList) do messageListActualSize = messageListActualSize + 1 end
+    for i = 0, messageListActualSize do
+        if (messageList[i] == chatMessage) then
+            return false
+        end
+    end
+
+
 	local lowerMessage = chatMessage:lower()
 	if (HasLFMTagCFA(lowerMessage)) or (isQuestFromLogInText(lowerMessage)) then
         if(Options.showRunsForXP == false) then
@@ -304,7 +348,7 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
         end
 
         if (HasDungeonAbbreviationCFA(lowerMessage)) or (isQuestFromLogInText(lowerMessage)) then
-
+            pushToMessageList(chatMessage)
             local link = "|cffffc0c0|Hplayer:"..sender.."|h["..sender.."]|h|r";
             local output = ""
             if (Options.showTimeStamp) then
@@ -347,7 +391,6 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
                 print('Did not find any chat windows named "LFM", please create one')
                 hasWarnedAboutChatName = true
             end
-            lastMessage = chatMessage
 		end
 	end
 end
@@ -467,9 +510,5 @@ print("Possible dungeons for your level: ")
 for key, dungeon in pairs(GetDungeonsByLevelCFA(UnitLevel("player"))) do
     print(key)
 end
-
-
-
-
 
 
