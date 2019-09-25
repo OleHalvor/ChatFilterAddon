@@ -36,9 +36,11 @@ end
 
 
 local Defaults={
-    onlyShowRelevantDungeons=true,
+    onlyShowRelevantDungeons=false,
     showTimeStamp=true,
-    showChannelOrigin=false
+    showChannelOrigin=false,
+    showRunsForXP=false,
+    showCleaveRuns=false
 };
 
 ChatFilterAddon_Options=SyncOptions(Options,Defaults);
@@ -157,20 +159,33 @@ local function isQuestFromLogInText(text)
     return false
 end
 
+local function containsText(message,text)
+    if (string.find(message:lower(),text:lower() )) then
+        return true
+    end
+    return false
+end
+
+local function containsTextFromArray(message,array)
+    for _, var in pairs(array) do
+        if (containsText(message,var)) then
+            return true
+        end
+    end
+    return false
+end
+
 local function getLFMAddonChannelIndex()
+    -- this doesn't work, right?
     numberOfChannels = C_ChatInfo.GetNumActiveChannels()
-    print("number of channels: ")
-    print(numberOfChannels)
     lfmAddonChannelIndex = 0
     for i = 1, numberOfChannels do
-        print(GetChannelDisplayInfo(i))
         if (GetChannelDisplayInfo(i) == "lfm-addon-channel" ) then
             lfmAddonChannelIndex = i
         end
     end
     if (lfmAddonChannelIndex==0) then
         JoinTemporaryChannel("lfm-addon-channel", "", ChatFrame1:GetID(), 0);
-        print('joining lfm-addon-channel')
     end
     return lfmAddonChannelIndex
 end
@@ -203,6 +218,28 @@ local function tablelength(T)
     return count
 end
 
+local function hasXPRunTags(message)
+    xpTags = {
+        " xp",
+        " exp"
+    }
+    if (containsTextFromArray(message,xpTags)) then
+        return true
+    end
+    return false
+end
+
+local function hasCleaveTags(message)
+    cleaveTags = {
+        "cleave",
+        "spellcleave"
+    }
+    if (containsTextFromArray(message,cleaveTags)) then
+        return true
+    end
+    return false
+end
+
 local hasWarnedAboutChatName = false
 local DungeonList = {}
 local Dungeons = {}
@@ -221,21 +258,16 @@ Frame:SetScript("OnEvent", function(_, event, ...)
         if (prefix=="LFMCF") then
             if ( not (UnitName("player")==sender or UnitName("player")..'-Gandling'==sender) ) then
                 words = mysplit(message,";")
-               -- print("message from "..words[2]..": "..message)
                 channelPlusNetworkSender=words[3].." - "..words[2]
                 if (tablelength(words) >= 4) then
                     ParseMessageCFA(words[1], words[4], channelPlusNetworkSender,"true")
                 else
-                    print('received message which did not parse? '..message)
+                    print('received message from other client which did not parse: '..message)
                 end
             end
         end
     end
 end)
-
-
-
-
 
 
 function ParseMessageCFA(sender, chatMessage, channel,network)
@@ -244,6 +276,18 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
     end
 	local lowerMessage = chatMessage:lower()
 	if (HasLFMTagCFA(lowerMessage)) or (isQuestFromLogInText(lowerMessage)) then
+        if(Options.showRunsForXP == false) then
+            if (hasXPRunTags(lowerMessage)) then
+                print('DEBUG: not showing message because it has XP run tags '..chatMessage)
+                return false
+            end
+        end
+        if (Options.showCleaveRuns == false) then
+            if (hasCleaveTags(lowerMessage)) then
+                print('DEBUG: not showing message because it has Cleave run tags '..chatMessage)
+                return false
+            end
+        end
 
         if (network == "false") then --send message to other clients
             words = {}
@@ -261,6 +305,7 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
         end
 
         if (HasDungeonAbbreviationCFA(lowerMessage)) or (isQuestFromLogInText(lowerMessage)) then
+
             local link = "|cffffc0c0|Hplayer:"..sender.."|h["..sender.."]|h|r";
             local output = ""
             if (Options.showTimeStamp) then
@@ -382,13 +427,8 @@ function GetDungeonsByLevelCFA(level)
     local dungeonsForLevel = {}
     for key in pairs(Dungeons) do
         local dungeon = Dungeons[key]
-        if (Options[dungeon.abbreviation]==true) then
-            print('matching '..dungeon.abbreviation..' because of options')
+        if (dungeon.MinLevel <= level and dungeon.MaxLevel >= level) then
             dungeonsForLevel[dungeon.Name] = dungeon
-        else
-            if (dungeon.MinLevel <= level and dungeon.MaxLevel >= level) then
-                dungeonsForLevel[dungeon.Name] = dungeon
-            end
         end
     end
     return dungeonsForLevel
