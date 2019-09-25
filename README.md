@@ -1,5 +1,5 @@
 # ChatFilterAddon
-This addon scans all incomming messages in all channels you have joined, looks for LFM messages, checks if the dungeon mentioned is within your level range and puts those messages into a chat window named "LFM". 
+This addon scans all incomming messages in all channels you have joined, looks for LFM messages, checks if the dungeon mentioned is within your level range and puts those messages into a chat window named "LFM". Also checks if LFM message contains a quest in your   quest log
 
 ### How to use
 
