@@ -4,7 +4,9 @@ local messageList = {"melding -2", "melding -1", "melding 0", "melding 1", "meld
 local messageListSize = 0 -- this is calculated, size is defined by array above
 for _ in pairs(messageList) do messageListSize = messageListSize + 1 end
 local lastMessageListUpdateTime = time()
-local messageListClearInterval = 30
+local messageListClearInterval = 60
+
+local versionNumber = 0.6
 
 local function pushToMessageList (message)
     local tableLengthInt = 0
@@ -162,6 +164,7 @@ InterfaceOptions_AddCategory(Panel);
 -- a lot of this code is copied from classicLFG addon
 
 local successFullReg = C_ChatInfo.RegisterAddonMessagePrefix("LFMCF")
+local successFullRegVersion = C_ChatInfo.RegisterAddonMessagePrefix("LFMCFV")
 
 -- /run C_ChatInfo.SendAddonMessage("prefix", "LFM DM","WHISPER","Dudetwo");
 -- /script C_ChatInfo.SendAddonMessage("prefix", "LFM DM","WHISPER","Dudetwo-Gandling");
@@ -224,6 +227,7 @@ local function spamAllHiddenChannels()
     for i = 1, GetNumDisplayChannels() do
         id, name = GetChannelName(i);
         if(name=="LfmAddonChannel") then
+            C_ChatInfo.SendAddonMessage("LFMCFV",versionNumber,"CHANNEL",i)
             C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"CHANNEL",i)
         end
     end
@@ -297,7 +301,7 @@ Frame:SetScript("OnEvent", function(_, event, ...)
     end
 end)
 
-
+local hasSentVersionNumber = false
 
 function ParseMessageCFA(sender, chatMessage, channel,network)
 
@@ -318,7 +322,7 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
 
 
 	local lowerMessage = chatMessage:lower()
-	if (HasLFMTagCFA(lowerMessage)) or (isQuestFromLogInText(lowerMessage)) then
+	if (HasLFMTagCFA(lowerMessage)) then
         if(Options.showRunsForXP == false) then
             if (hasXPRunTags(lowerMessage)) then
                 print('DEBUG: not showing message because it has XP run tags '..chatMessage)
@@ -486,7 +490,7 @@ DefineDungeonCFA("Blackfathom Deeps", 5, 22, 30, "Ashenvale", "bfd", {"bfd","bla
 DefineDungeonCFA("The Stockades", 5, 21, 30, "Stormwind", "stockades", {"stockades", "stocks","stockade"})
 DefineDungeonCFA("Gnomeregan", 5, 27, 35, "Dun Morogh", "gnomergan", {"gnomeregan", "gnomer"})
 DefineDungeonCFA("Razorfen Kraul", 5, 22, 32, "Barrens", "rfk", {"rfk", "kraul"})
-DefineDungeonCFA("The Scarlet Monastery: Graveyard", 5, 28, 35, "Tirisfal Glades", "sm graveyard", {"sm gy","gy","grave","graveyard"})
+DefineDungeonCFA("The Scarlet Monastery: Graveyard", 5, 28, 35, "Tirisfal Glades", "sm graveyard", {"sm gy","grave","graveyard"})
 DefineDungeonCFA("The Scarlet Monastery: Library", 5, 30, 39, "Tirisfal Glades", "sm library", {"sm", "lib","library"})
 DefineDungeonCFA("The Scarlet Monastery: Armory", 5, 32, 42, "Tirisfal Glades", "sm armory", {"sm","arms","arm"})
 DefineDungeonCFA("The Scarlet Monastery: Cathedral", 5, 34, 44, "Tirisfal Glades", "sm cathedral", {"sm","cath"})
@@ -495,13 +499,13 @@ DefineDungeonCFA("Uldaman", 5, 35, 45, "Badlands", "ulda", {"ulda","uldaman"})
 DefineDungeonCFA("Zul'Farak", 5, 40, 50, "Tanaris", "zf", {"zf","zul'farak"})
 DefineDungeonCFA("Maraudon", 5, 44, 54, "Desolace", "maraudon", {"maraudon", "mara"})
 DefineDungeonCFA("Temple of Atal'Hakkar", 5, 47, 60, "Swamp of Sorrows", "st", {"st", "toa", "atal", "sunken temple"})
-DefineDungeonCFA("Blackrock Depths", 5, 49, 60, "Blackrock Mountain", "brd", {"brd","moira","lava run","blackrock depths"})
+DefineDungeonCFA("Blackrock Depths", 5, 49, 60, "Blackrock Mountain", "brd", {"brd","moira","lava run","blackrock depths","arena", "anger","golem"})
 DefineDungeonCFA("Lower Blackrock Spire", 10, 55, 60, "Blackrock Mountain", "lbrs", {"lbrs","lower blackrock spire"})
 DefineDungeonCFA("Upper Blackrock Spire", 10, 55, 60, "Blackrock Mountain", "ubrs", {"ubrs","upper blackrock spire"})
 -- ToDo: Need to add all the Dungeon parts once they are released on Classic Realms
 --ClassicLFG:DefineDungeon("Dire Maul", 55, 60, "Feralas", {"dm:"})
 --
-DefineDungeonCFA("Stratholme", 5, 56, 60, "Eastern Plaguelands", "strat", {"strat","stratholme","start","living","ud","undead"})
+DefineDungeonCFA("Stratholme", 5, 56, 60, "Eastern Plaguelands", "strat", {"strat","stratholme","start","living"," ud ","undead"})
 DefineDungeonCFA("Scholomance", 5, 56, 60, "Eastern Plaguelands", "scholo", {"scholo","scholomance"})
 DefineDungeonCFA("Molten Core", 40, 60, 60, "Blackrock Depths", "mc", {"mc","molten core"})
 DefineDungeonCFA("Onyxia's Lair", 40, 60, 60, "Dustwallow Marsh", "ony", {"ony", "onyxia","onyxia's lair"})
