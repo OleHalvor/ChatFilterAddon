@@ -5,8 +5,9 @@ local messageListSize = 0 -- this is calculated, size is defined by array above
 for _ in pairs(messageList) do messageListSize = messageListSize + 1 end
 local lastMessageListUpdateTime = time()
 local messageListClearInterval = 60
-
+local serverTag = "Gandling"
 local versionNumber = 0.6
+local hasWarnedAboutFullGroup = false
 
 local function pushToMessageList (message)
     local tableLengthInt = 0
@@ -63,14 +64,19 @@ function try(f, catch_f)
 end
 
 
-
+local disabledDungeons = {
+}
 
 local Defaults={
     onlyShowRelevantDungeons=true,
-    showTimeStamp=true,
+    showTimeStamp=false,
     showChannelOrigin=false,
     showRunsForXP=true,
-    showCleaveRuns=true
+    showCleaveRuns=true,
+    disableIfInFullGroup=true,
+    DEBUG_MODE=false,
+    onlyShowChannelIfFromOtherPlayer=true,
+    includeLFG=false
 };
 
 ChatFilterAddon_Options=SyncOptions(Options,Defaults);
@@ -100,6 +106,10 @@ Panel:SetScript("OnEvent",function(self,event,...)
     if event=="ADDON_LOADED" and (...)==Name then
         ChatFilterAddon_Options=SyncOptions(Options,ChatFilterAddon_Options,true);
         SyncOptions(Changes,Options,true);
+        serverTag=GetNormalizedRealmName();
+        if serverTag==nil then
+            serverTag = "Gandling"
+        end
         self:UnregisterEvent(event);
     end
 end);
@@ -172,10 +182,14 @@ local successFullRegVersion = C_ChatInfo.RegisterAddonMessagePrefix("LFMCFV")
 -- /script SendAddonMessage("LFMCF", "LFM DM", "WHISPER", "Dudetwo-Gandling");
 
 
+
 local function getQuestsInLog()
     quests = {}
     for i=1, GetNumQuestLogEntries() do
-        quests[i] = GetQuestLogTitle(i);
+        local title, level, suggestedGroup, isHeader, isCollapsed, isComplete, frequency, questID, startEvent, displayQuestID, isOnMap, hasLocalPOI, isTask, isBounty, isStory, isHidden, isScaling = GetQuestLogTitle(i)
+        if (not level==0) then
+            quests[i] = GetQuestLogTitle(i);
+        end
     end
     return quests
 end
@@ -205,6 +219,8 @@ local function containsTextFromArray(message,array)
     end
     return false
 end
+
+print(getQuestsInLog())
 
 local function getLFMAddonChannelIndex()
     -- this doesn't work, right?
@@ -272,6 +288,12 @@ local function hasCleaveTags(message)
     return false
 end
 
+local function classFromGUID(guid)
+    if not guid then return "",""; end
+    local _,class,_,race,gender=GetPlayerInfoByGUID(guid);
+    return class
+end
+
 local hasWarnedAboutChatName = false
 local DungeonList = {}
 local Dungeons = {}
@@ -288,9 +310,14 @@ Frame:SetScript("OnEvent", function(_, event, ...)
     if (event == "CHAT_MSG_ADDON") then
         local prefix, message, type, sender, _, _, _, _, _ = ...
         if (prefix=="LFMCF") then
-            if ( not (UnitName("player")==sender or UnitName("player")..'-Gandling'==sender) ) then
+            if ( not (UnitName("player")==sender or UnitName("player")..'-'..serverTag==sender) ) then
                 words = mysplit(message,";")
-                channelPlusNetworkSender=words[3].." - "..words[2]
+                if (Options.DEBUG_MODE==true) then
+                    channelPlusNetworkSender=words[3].." - "..words[2]
+                else
+                    channelPlusNetworkSender=words[3]
+                end
+
                 if (tablelength(words) >= 4) then
                     ParseMessageCFA(words[1], words[4], channelPlusNetworkSender,"true")
                 else
@@ -298,10 +325,48 @@ Frame:SetScript("OnEvent", function(_, event, ...)
                 end
             end
         end
+        if (prefix=="LFMCFV" and Options.DEBUG_MODE) then
+            print(sender..' is using addon version: '..message)
+        end
     end
 end)
 
 local hasSentVersionNumber = false
+
+function printMessageToLfmWindow(output)
+    local lfgOutputFound = false
+    for i = 1, NUM_CHAT_WINDOWS do
+        if (GetChatWindowInfo(i)=="lfm" or GetChatWindowInfo(i)=="LFM") then
+            lfgOutputFound = true
+            -- don't know how to specify correct chat frame without hard coding. please don't judge me
+            if (i==1) then
+                ChatFrame1:AddMessage(output)
+            end
+            if (i==2) then
+                ChatFrame2:AddMessage(output)
+            end
+            if (i==3) then
+                ChatFrame3:AddMessage(output)
+            end
+            if (i==4) then
+                ChatFrame4:AddMessage(output)
+            end
+            if (i==5) then
+                ChatFrame5:AddMessage(output)
+            end
+            if (i==6) then
+                ChatFrame6:AddMessage(output)
+            end
+            if (i==7) then
+                ChatFrame7:AddMessage(output)
+            end
+        end
+    end
+    if (not lfgOutputFound and not hasWarnedAboutChatName) then
+        print('Did not find any chat windows named "LFM", please create one')
+        hasWarnedAboutChatName = true
+    end
+end
 
 function ParseMessageCFA(sender, chatMessage, channel,network)
 
@@ -322,7 +387,7 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
 
 
 	local lowerMessage = chatMessage:lower()
-	if (HasLFMTagCFA(lowerMessage)) then
+	if (HasLFMTagCFA(lowerMessage) or (Options.includeLFG and HasLFGTagCFA(lowerMessage))) then
         if(Options.showRunsForXP == false) then
             if (hasXPRunTags(lowerMessage)) then
                 print('DEBUG: not showing message because it has XP run tags '..chatMessage)
@@ -351,6 +416,15 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
             spamAllHiddenChannels(networkMessage)
         end
 
+        if (Options.disableIfInFullGroup and (GetNumGroupMembers() == 5)) then
+            if (not hasWarnedAboutFullGroup) then
+
+            end
+            hasWarnedAboutFullGroup = true
+
+            return false
+        end
+
         if (HasDungeonAbbreviationCFA(lowerMessage)) or (isQuestFromLogInText(lowerMessage)) then
             pushToMessageList(chatMessage)
             local link = "|cffffc0c0|Hplayer:"..sender.."|h["..sender.."]|h|r";
@@ -360,41 +434,11 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
                 output = (output.."["..hours..":"..minutes.."] ")
             end
             output = output..link..": "..chatMessage
-            if (Options.showChannelOrigin) then
+            if (Options.showChannelOrigin or (Options.onlyShowChannelIfFromOtherPlayer and network=="true") ) then
                 output = output.." ["..channel.."]";
             end
-            local lfgOutputFound = false
-            for i = 1, NUM_CHAT_WINDOWS do
-                if (GetChatWindowInfo(i)=="lfm" or GetChatWindowInfo(i)=="LFM") then
-                    lfgOutputFound = true
-                    -- don't know how to specify correct chat frame without hard coding. please don't judge me
-                    if (i==1) then
-                        ChatFrame1:AddMessage(output)
-                    end
-                    if (i==2) then
-                        ChatFrame2:AddMessage(output)
-                    end
-                    if (i==3) then
-                        ChatFrame3:AddMessage(output)
-                    end
-                    if (i==4) then
-                        ChatFrame4:AddMessage(output)
-                    end
-                    if (i==5) then
-                        ChatFrame5:AddMessage(output)
-                    end
-                    if (i==6) then
-                        ChatFrame6:AddMessage(output)
-                    end
-                    if (i==7) then
-                        ChatFrame7:AddMessage(output)
-                     end
-                end
-            end
-            if (not lfgOutputFound and not hasWarnedAboutChatName) then
-                print('Did not find any chat windows named "LFM", please create one')
-                hasWarnedAboutChatName = true
-            end
+
+            printMessageList(output)
 		end
 	end
 end
@@ -409,6 +453,7 @@ function HasLFMTagCFA(text)
         "lf2",
         "lf3",
         "lf ",
+        "last spot",
         "looking for more"
     }
     for _, tag in pairs(lfmTags) do
@@ -418,6 +463,14 @@ function HasLFMTagCFA(text)
     end
     return false
 end
+
+function HasLFGTagCFA(text)
+    if (string.find(text, "lfg")) then
+        return true
+    end
+    return false
+end
+
 
 function ArrayContainsValueCFA(array, val)
     for index, value in ipairs(array) do
@@ -432,6 +485,9 @@ function HasDungeonAbbreviationCFA(chatMessage)
     local level = UnitLevel("player")
     if (Options.onlyShowRelevantDungeons) then
         for key, dungeon in pairs(GetDungeonsByLevelCFA(level)) do
+            if (containsTextFromArray(Dungeons[key].Name,disabledDungeons)) then
+                return false
+            end
             for _, abbreviation in pairs(dungeon.Abbreviations) do
                 words = {}
                 for word in chatMessage:gmatch("%w+") do table.insert(words, word) end
