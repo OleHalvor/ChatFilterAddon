@@ -70,13 +70,13 @@ local disabledDungeons = {
 local Defaults={
     onlyShowRelevantDungeons=true,
     showTimeStamp=false,
-    showChannelOrigin=false,
+    alwaysShowChannel=false,
     showRunsForXP=true,
     showCleaveRuns=true,
     disableIfInFullGroup=true,
     DEBUG_MODE=false,
     onlyShowChannelIfFromOtherPlayer=true,
-    includeLFG=false
+    alwaysIncludeLFGMessages=false
 };
 
 ChatFilterAddon_Options=SyncOptions(Options,Defaults);
@@ -368,6 +368,11 @@ function printMessageToLfmWindow(output)
     end
 end
 
+local function isInDungeon()
+    -- loop over dungeons, if current zone is a dungeon, return dungeon. else return false
+    return
+end
+
 function ParseMessageCFA(sender, chatMessage, channel,network)
 
     if (lastMessageListUpdateTime + messageListClearInterval < time()) then
@@ -387,7 +392,7 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
 
 
 	local lowerMessage = chatMessage:lower()
-	if (HasLFMTagCFA(lowerMessage) or (Options.includeLFG and HasLFGTagCFA(lowerMessage))) then
+	if (HasLFMTagCFA(lowerMessage) or (Options.alwaysIncludeLFGMessages or (GetNumGroupMembers()>1 and GetNumGroupMembers()<5) and HasLFGTagCFA(lowerMessage))) then
         if(Options.showRunsForXP == false) then
             if (hasXPRunTags(lowerMessage)) then
                 if(Options.DEBUG_MODE) then
@@ -427,7 +432,6 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
                 printMessageToLfmWindow("Good luck and have fun in the dungeon :)")
             end
             hasWarnedAboutFullGroup = true
-
             return false
         end
 
@@ -440,7 +444,7 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
                 output = (output.."["..hours..":"..minutes.."] ")
             end
             output = output..link..": "..chatMessage
-            if (Options.showChannelOrigin or (Options.onlyShowChannelIfFromOtherPlayer and network=="true") ) then
+            if (Options.alwaysShowChannel or (Options.onlyShowChannelIfFromOtherPlayer and network=="true") ) then
                 output = output.." ["..channel.."]";
             end
             printMessageToLfmWindow(output)
