@@ -390,13 +390,17 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
 	if (HasLFMTagCFA(lowerMessage) or (Options.includeLFG and HasLFGTagCFA(lowerMessage))) then
         if(Options.showRunsForXP == false) then
             if (hasXPRunTags(lowerMessage)) then
-                print('DEBUG: not showing message because it has XP run tags '..chatMessage)
+                if(Options.DEBUG_MODE) then
+                    print('DEBUG: not showing message because it has XP run tags '..chatMessage)
+                end
                 return false
             end
         end
         if (Options.showCleaveRuns == false) then
             if (hasCleaveTags(lowerMessage)) then
-                print('DEBUG: not showing message because it has Cleave run tags '..chatMessage)
+                if(Options.DEBUG_MODE) then
+                    print('DEBUG: not showing message because it has Cleave run tags '..chatMessage)
+                end
                 return false
             end
         end
@@ -418,7 +422,9 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
 
         if (Options.disableIfInFullGroup and (GetNumGroupMembers() == 5)) then
             if (not hasWarnedAboutFullGroup) then
-
+                printMessageToLfmWindow("You're inn a full group. LFM will be disabled")
+                printMessageToLfmWindow("If you still wish to look for LFM request this can be toggled in the settings")
+                printMessageToLfmWindow("Good luck and have fun in the dungeon :)")
             end
             hasWarnedAboutFullGroup = true
 
@@ -437,8 +443,7 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
             if (Options.showChannelOrigin or (Options.onlyShowChannelIfFromOtherPlayer and network=="true") ) then
                 output = output.." ["..channel.."]";
             end
-
-            printMessageList(output)
+            printMessageToLfmWindow(output)
 		end
 	end
 end
