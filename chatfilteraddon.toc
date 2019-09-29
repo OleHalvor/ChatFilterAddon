@@ -1,6 +1,6 @@
 ## Interface: 50400
 ## Title: ChatFilterAddon
 ## Author: Me
-## Version: 0.5
+## Version: 0.6
 
 main.lua
