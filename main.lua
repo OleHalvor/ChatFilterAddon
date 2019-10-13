@@ -6,7 +6,7 @@ for _ in pairs(messageList) do messageListSize = messageListSize + 1 end
 local lastMessageListUpdateTime = time()
 local messageListClearInterval = 60
 local serverTag = "Gandling"
-local versionNumber = 0.6
+local versionNumber = 0.7
 local hasWarnedAboutFullGroup = false
 
 local function pushToMessageList (message)
@@ -65,7 +65,12 @@ end
 
 
 local disabledDungeons = {
+    "The Scarlet Monastery: Library",
+    "The Scarlet Monastery: Cathedral",
+    "The Scarlet Monastery: Armory",
+    "The Scarlet Monastery: Graveyard"
 }
+disabledDungeons = {}
 
 local Defaults={
     onlyShowRelevantDungeons=true,
@@ -548,19 +553,19 @@ end
 -- Dungeon defining stole shamelessly from ClassicLFG addon
 
 DefineDungeonCFA("Ragefire Chasm", 5, 13, 18, "Orgrimmar", "rfc", {"rfc", "ragefire"})
-DefineDungeonCFA("Wailing Caverns", 5, 15, 25, "Barrens", "wc", {"wc","wailing caverns"})
+DefineDungeonCFA("Wailing Caverns", 5, 17, 24, "Barrens", "wc", {"wc","wailing caverns"})
 DefineDungeonCFA("The Deadmines", 5, 17, 24, "Westfall", "vc", {"dm", "vc", "deadmines"})
-DefineDungeonCFA("Shadowfang Keep", 5, 20, 28, "Silverpine Forest", "sfk", {"sfk", "shadowfang"})
+DefineDungeonCFA("Shadowfang Keep", 5, 21, 30, "Silverpine Forest", "sfk", {"sfk", "shadowfang"})
 DefineDungeonCFA("Blackfathom Deeps", 5, 22, 32, "Ashenvale", "bfd", {"bfd","blackfathom deeps"})
-DefineDungeonCFA("The Stockades", 5, 21, 30, "Stormwind", "stockades", {"stockades", "stocks","stockade"})
+DefineDungeonCFA("The Stockades", 5, 22, 30, "Stormwind", "stockades", {"stockades", "stocks","stockade"})
 DefineDungeonCFA("Gnomeregan", 5, 28, 38, "Dun Morogh", "gnomergan", {"gnomeregan", "gnomer"})
-DefineDungeonCFA("Razorfen Kraul", 5, 26, 40, "Barrens", "rfk", {"rfk", "kraul"})
+DefineDungeonCFA("Razorfen Kraul", 5, 27, 39, "Barrens", "rfk", {"rfk", "kraul"})
 DefineDungeonCFA("The Scarlet Monastery: Graveyard", 5, 28, 38, "Tirisfal Glades", "sm graveyard", {"sm gy","grave","graveyard"})
 DefineDungeonCFA("The Scarlet Monastery: Library", 5, 30, 39, "Tirisfal Glades", "sm library", {"sm", "lib","library"})
 DefineDungeonCFA("The Scarlet Monastery: Armory", 5, 32, 42, "Tirisfal Glades", "sm armory", {"sm","arms","arm"})
-DefineDungeonCFA("The Scarlet Monastery: Cathedral", 5, 34, 45, "Tirisfal Glades", "sm cathedral", {"sm","cath"})
-DefineDungeonCFA("Razorfen Downs", 5, 36, 50, "Barrens", "rfd", {"rfd","razorfen downs"})
-DefineDungeonCFA("Uldaman", 5, 37, 52, "Badlands", "ulda", {"ulda","uldaman"})
+DefineDungeonCFA("The Scarlet Monastery: Cathedral", 5, 34, 44, "Tirisfal Glades", "sm cathedral", {"sm","cath"})
+DefineDungeonCFA("Razorfen Downs", 5, 36, 46, "Barrens", "rfd", {"rfd","razorfen downs"})
+DefineDungeonCFA("Uldaman", 5, 41, 52, "Badlands", "ulda", {"ulda","uldaman"})
 DefineDungeonCFA("Zul'Farak", 5, 42, 54, "Tanaris", "zf", {"zf","zul'farak"})
 DefineDungeonCFA("Maraudon", 5, 44, 54, "Desolace", "maraudon", {"maraudon", "mara"})
 DefineDungeonCFA("Temple of Atal'Hakkar", 5, 47, 60, "Swamp of Sorrows", "st", {"st", "toa", "atal", "sunken temple"})
