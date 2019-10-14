@@ -1,6 +1,6 @@
 # ChatFilterAddon
 
-Latest version is 0.6: https://github.com/OleHalvor/ChatFilterAddon/releases/download/0.6/ChatFilterAddon.zip
+Latest version is 0.8: https://github.com/OleHalvor/ChatFilterAddon/releases/download/0.8/ChatFilterAddon.zip
 
 ## Main Features of this addon:
 1. Scans all of your joined chat channels for relevant dungeons and copies those messages to a seperate chat window named "LFM"
