@@ -6,7 +6,7 @@ for _ in pairs(messageList) do messageListSize = messageListSize + 1 end
 local lastMessageListUpdateTime = time()
 local messageListClearInterval = 60
 local serverTag = "Gandling"
-local versionNumber = "0.8Developer"
+local versionNumber = "0.8"
 local hasWarnedAboutFullGroup = false
 
 local function pushToMessageList (message)
