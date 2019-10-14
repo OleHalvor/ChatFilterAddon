@@ -6,7 +6,7 @@ for _ in pairs(messageList) do messageListSize = messageListSize + 1 end
 local lastMessageListUpdateTime = time()
 local messageListClearInterval = 60
 local serverTag = "Gandling"
-local versionNumber = 0.7
+local versionNumber = "0.8Developer"
 local hasWarnedAboutFullGroup = false
 
 local function pushToMessageList (message)
@@ -35,6 +35,7 @@ local Title=select(2,GetAddOnInfo(Name));
 local Version=GetAddOnMetadata(Name,"Version");
 local Options={};
 AddOn.Options=Options;
+local addon_users = {}
 
 local function SyncOptions(new,old,merge)
     --	This is practicly a table copy function to copy values from old to new
@@ -73,15 +74,16 @@ local disabledDungeons = {
 disabledDungeons = {}
 
 local Defaults={
-    onlyShowRelevantDungeons=true,
-    showTimeStamp=false,
-    alwaysShowChannel=false,
-    showRunsForXP=true,
-    showCleaveRuns=true,
-    disableIfInFullGroup=true,
+    --show_all_LFM_messages=true,
+    show_all_LFM_messages=false,
+    show_time_stamp=false,
+    always_show_channel=false,
+    hide_xp_runs=false,
+    hide_cleave_runs=false,
+    keep_looking_while_in_full_group=false,
     DEBUG_MODE=false,
-    onlyShowChannelIfFromOtherPlayer=true,
-    alwaysIncludeLFGMessages=false
+    only_show_channel_if_from_other_player=true,
+    always_include_LFG_messages=false
 };
 
 ChatFilterAddon_Options=SyncOptions(Options,Defaults);
@@ -129,7 +131,8 @@ local BuildButton; do--	function BuildButton(tbl,var,txt,x,y)
     function BuildButton(tbl,var,txt,x,y)
         local btn=CreateFrame("CheckButton",nil,Panel,"UICheckButtonTemplate");
         btn:SetPoint("TOPLEFT",x,y);
-        btn.text:SetText(txt or var:gsub("^(.)",string.upper));
+        local tempVar = var:gsub("%_"," ")
+        btn.text:SetText(txt or tempVar:gsub("^(.)",string.upper));
         btn:SetScript("OnClick",OnClick);
 
         btn.Table=tbl;
@@ -148,9 +151,6 @@ do--	LinkButtons
     for i,j in ipairs(list) do
         BuildButton(Changes,j,nil,16,-i*24-24);
     end
-
-
-
 end
 
 --------------------------
@@ -186,6 +186,11 @@ local successFullRegVersion = C_ChatInfo.RegisterAddonMessagePrefix("LFMCFV")
 -- /script SendChatMessage("melding" ,"WHISPER" ,"COMMON" ,"Dudetwo-Gandling");
 -- /script SendAddonMessage("LFMCF", "LFM DM", "WHISPER", "Dudetwo-Gandling");
 
+
+SLASH_ChatFilterAddon1 = "/lfm";
+function SlashCmdList.ChatFilterAddon(msg)
+    InterfaceOptionsFrame_OpenToCategory(Panel);
+end
 
 
 local function getQuestsInLog()
@@ -238,12 +243,14 @@ local function getLFMAddonChannelIndex()
     end
     if (lfmAddonChannelIndex==0) then
         JoinTemporaryChannel("lfm-addon-channel", "", ChatFrame1:GetID(), 0);
+        RemoveChatWindowChannel(1,"lfm-addon-channel")
     end
     return lfmAddonChannelIndex
 end
 
-local function spamAllHiddenChannels()
+local function spamAllHiddenChannels(networkMessage)
     JoinChannelByName("LfmAddonChannel", "", ChatFrame1:GetID(), 0);
+    RemoveChatWindowChannel(ChatFrame1:GetID(),"LfmAddonChannel")
 
     for i = 1, GetNumDisplayChannels() do
         id, name = GetChannelName(i);
@@ -253,6 +260,8 @@ local function spamAllHiddenChannels()
         end
     end
 end
+
+
 
 local function mysplit (inputstr, sep)
     if sep == nil then
@@ -293,11 +302,6 @@ local function hasCleaveTags(message)
     return false
 end
 
-local function classFromGUID(guid)
-    if not guid then return "",""; end
-    local _,class,_,race,gender=GetPlayerInfoByGUID(guid);
-    return class
-end
 
 local hasWarnedAboutChatName = false
 local DungeonList = {}
@@ -331,7 +335,11 @@ Frame:SetScript("OnEvent", function(_, event, ...)
             end
         end
         if (prefix=="LFMCFV" and Options.DEBUG_MODE) then
-            print(sender..' is using addon version: '..message)
+            if(addon_users.sender ~= true) then
+                printMessageToLfmWindow('|cFF00FF00'..sender..' is using addon version: '..message..'|r')
+                addon_users.sender = true
+            end
+
         end
     end
 end)
@@ -365,6 +373,12 @@ function printMessageToLfmWindow(output)
             if (i==7) then
                 ChatFrame7:AddMessage(output)
             end
+            if (i==8) then
+                ChatFrame8:AddMessage(output)
+            end
+            if (i==9) then
+                ChatFrame9:AddMessage(output)
+            end
         end
     end
     if (not lfgOutputFound and not hasWarnedAboutChatName) then
@@ -377,6 +391,71 @@ local function isInDungeon()
     -- loop over dungeons, if current zone is a dungeon, return dungeon. else return false
     return
 end
+
+local waitTable = {};
+local waitFrame = nil;
+
+function LFMCF__wait(delay, func, ...)
+if(type(delay)~="number" or type(func)~="function") then
+return false;
+end
+if(waitFrame == nil) then
+waitFrame = CreateFrame("Frame","WaitFrame", UIParent);
+waitFrame:SetScript("onUpdate",function (self,elapse)
+local count = #waitTable;
+local i = 1;
+while(i<=count) do
+local waitRecord = tremove(waitTable,i);
+local d = tremove(waitRecord,1);
+local f = tremove(waitRecord,1);
+local p = tremove(waitRecord,1);
+if(d>elapse) then
+tinsert(waitTable,i,{d-elapse,f,p});
+i = i + 1;
+else
+count = count - 1;
+f(unpack(p));
+end
+end
+end);
+end
+tinsert(waitTable,{delay,func,{...}});
+    return true;
+end
+
+local function removeBlizzIcons(text)
+    local textWithoutIcons = text
+    icons = {
+        "{Skull}",
+        "{Cross}",
+        "{Square}",
+        "{Moon}",
+        "{Triangle}",
+        "{Diamond}",
+        "{Circle}",
+        "{Star}"
+        }
+    for _, var in pairs(icons) do
+        if (containsText(text,var)) then
+            textWithoutIcons = textWithoutIcons:gsub(("%"..var)," ")
+        end
+    end
+    for _, var in pairs(icons) do
+        if (containsText(text,var:upper())) then
+            textWithoutIcons = textWithoutIcons:gsub(("%"..var:upper())," ")
+        end
+    end
+    for _, var in pairs(icons) do
+        if (containsText(text,var:lower())) then
+            textWithoutIcons = textWithoutIcons:gsub(("%"..var:lower())," ")
+        end
+    end
+    if (text ~= textWithoutIcons and Options.DEBUG_MODE) then
+        printMessageToLfmWindow("Fjernet blizz ikon! før var det: "..text)
+    end
+    return textWithoutIcons
+end
+
 
 function ParseMessageCFA(sender, chatMessage, channel,network)
 
@@ -395,10 +474,9 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
         end
     end
 
-
 	local lowerMessage = chatMessage:lower()
-	if (HasLFMTagCFA(lowerMessage) or (Options.alwaysIncludeLFGMessages or (GetNumGroupMembers()>1 and GetNumGroupMembers()<5) and HasLFGTagCFA(lowerMessage))) then
-        if(Options.showRunsForXP == false) then
+	if (HasLFMTagCFA(lowerMessage) or (Options.always_include_LFG_messages or (GetNumGroupMembers()>1 and GetNumGroupMembers()<5) and HasLFGTagCFA(lowerMessage))) then
+        if(Options.hide_xp_runs == true) then
             if (hasXPRunTags(lowerMessage)) then
                 if(Options.DEBUG_MODE) then
                     print('DEBUG: not showing message because it has XP run tags '..chatMessage)
@@ -406,7 +484,7 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
                 return false
             end
         end
-        if (Options.showCleaveRuns == false) then
+        if (Options.hide_cleave_runs == true) then
             if (hasCleaveTags(lowerMessage)) then
                 if(Options.DEBUG_MODE) then
                     print('DEBUG: not showing message because it has Cleave run tags '..chatMessage)
@@ -430,7 +508,7 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
             spamAllHiddenChannels(networkMessage)
         end
 
-        if (Options.disableIfInFullGroup and (GetNumGroupMembers() == 5)) then
+        if ((not Options.keep_looking_while_in_full_group) and (GetNumGroupMembers() == 5)) then
             if (not hasWarnedAboutFullGroup) then
                 printMessageToLfmWindow("You're inn a full group. LFM will be disabled")
                 printMessageToLfmWindow("If you still wish to look for LFM request this can be toggled in the settings")
@@ -440,20 +518,25 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
             return false
         end
 
-        if (HasDungeonAbbreviationCFA(lowerMessage)) or (isQuestFromLogInText(lowerMessage)) then
+        local dungeonInMessage = HasDungeonAbbreviationCFA(lowerMessage)
+        if ( dungeonInMessage ~= false or (isQuestFromLogInText(lowerMessage))) then
+            hasWarnedAboutFullGroup = false
             pushToMessageList(chatMessage)
             local link = "|cffffc0c0|Hplayer:"..sender.."|h["..sender.."]|h|r";
+            local j,k = string.find(lowerMessage,dungeonInMessage)
+            local newMessage = string.sub(chatMessage,0,(j-1)).."|cffffc0FF"..string.sub(chatMessage,j,k).."|r"..string.sub(chatMessage,k+1,chatMessage:len())
+            --local output = "|cffffc0FF["..dungeonInMessage:upper().."]"
             local output = ""
-            if (Options.showTimeStamp) then
+            if (Options.show_time_stamp) then
                 local hours,minutes = GetGameTime();
                 output = (output.."["..hours..":"..minutes.."] ")
             end
-            output = output..link..": "..chatMessage
-            if (Options.alwaysShowChannel or (Options.onlyShowChannelIfFromOtherPlayer and network=="true") ) then
+            output = output..link..": "..newMessage
+            if (Options.always_show_channel or (Options.only_show_channel_if_from_other_player and network=="true") ) then
                 output = output.." ["..channel.."]";
             end
-            printMessageToLfmWindow(output)
-		end
+            printMessageToLfmWindow(removeBlizzIcons(output))
+        end
 	end
 end
 
@@ -497,7 +580,7 @@ end
 
 function HasDungeonAbbreviationCFA(chatMessage)
     local level = UnitLevel("player")
-    if (Options.onlyShowRelevantDungeons) then
+    if (not Options.show_all_LFM_messages) then
         for key, dungeon in pairs(GetDungeonsByLevelCFA(level)) do
             if (containsTextFromArray(Dungeons[key].Name,disabledDungeons)) then
                 return false
@@ -506,7 +589,7 @@ function HasDungeonAbbreviationCFA(chatMessage)
                 words = {}
                 for word in chatMessage:gmatch("%w+") do table.insert(words, word) end
                 if (ArrayContainsValueCFA(words, abbreviation)) then
-                    return true
+                    return abbreviation
                 end
             end
         end
@@ -516,12 +599,12 @@ function HasDungeonAbbreviationCFA(chatMessage)
                 words = {}
                 for word in chatMessage:gmatch("%w+") do table.insert(words, word) end
                 if (ArrayContainsValueCFA(words, abbreviation)) then
-                    return true
+                    return abbreviation
                 end
             end
         end
     end
-    return nil
+    return false
 end
 
 function DefineDungeonCFA(name, size, minLevel, maxLevel, location, abbreviation, abbreviations)
@@ -584,5 +667,6 @@ print("Possible dungeons for your level: ")
 for key, dungeon in pairs(GetDungeonsByLevelCFA(UnitLevel("player"))) do
     print(key)
 end
+
 
 
