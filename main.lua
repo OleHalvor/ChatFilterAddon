@@ -5,8 +5,8 @@ local messageListSize = 0 -- this is calculated, size is defined by array above
 for _ in pairs(messageList) do messageListSize = messageListSize + 1 end
 local lastMessageListUpdateTime = time()
 local messageListClearInterval = 60
-local serverTag = "Gandling"
-local versionNumber = "0.8"
+local serverTag = ""
+local versionNumber = "0.9.0"
 local hasWarnedAboutFullGroup = false
 
 local function pushToMessageList (message)
@@ -74,16 +74,16 @@ local disabledDungeons = {
 disabledDungeons = {}
 
 local Defaults={
-    --show_all_LFM_messages=true,
-    show_all_LFM_messages=false,
-    show_time_stamp=false,
-    always_show_channel=false,
-    hide_xp_runs=false,
-    hide_cleave_runs=false,
+    --include_dungeons_outside_of_level_range=true,
+    include_dungeons_outside_of_level_range=false,
+    show_time_stamp_on_messages=false,
+    display_channel_on_all_messages=false,
+    hide_XP_runs=false,
+    hide_cleave_and_AOE_runs=false,
     keep_looking_while_in_full_group=false,
     DEBUG_MODE=false,
-    only_show_channel_if_from_other_player=true,
-    always_include_LFG_messages=false
+    display_channel_if_from_other_addon_user=true,
+    include_LFG_messages_in_addition_to_LFM=false
 };
 
 ChatFilterAddon_Options=SyncOptions(Options,Defaults);
@@ -190,6 +190,7 @@ local successFullRegVersion = C_ChatInfo.RegisterAddonMessagePrefix("LFMCFV")
 SLASH_ChatFilterAddon1 = "/lfm";
 function SlashCmdList.ChatFilterAddon(msg)
     InterfaceOptionsFrame_OpenToCategory(Panel);
+    InterfaceOptionsFrame_OpenToCategory(Panel);
 end
 
 
@@ -261,8 +262,6 @@ local function spamAllHiddenChannels(networkMessage)
     end
 end
 
-
-
 local function mysplit (inputstr, sep)
     if sep == nil then
         sep = "%s"
@@ -282,8 +281,8 @@ end
 
 local function hasXPRunTags(message)
     xpTags = {
-        " xp",
-        " exp"
+        "xp",
+        "exp"
     }
     if (containsTextFromArray(message,xpTags)) then
         return true
@@ -294,14 +293,14 @@ end
 local function hasCleaveTags(message)
     cleaveTags = {
         "cleave",
-        "spellcleave"
+        "spellcleave",
+        "aoe"
     }
     if (containsTextFromArray(message,cleaveTags)) then
         return true
     end
     return false
 end
-
 
 local hasWarnedAboutChatName = false
 local DungeonList = {}
@@ -313,7 +312,10 @@ Frame:RegisterEvent("CHAT_MSG_ADDON")
 Frame:SetScript("OnEvent", function(_, event, ...)
     if (event == "CHAT_MSG_CHANNEL") then
         local message, player, _, _, _, _, _, _, channelName = ...
-        ParseMessageCFA(player, message, channelName,"false")
+        local lfmSend = ParseMessageCFA(player, message, channelName,"false")
+        if(lfmSend == false and Options.DEBUG_MODE) then
+            printMessageToNotLfmWindow(message)
+        end
     end
 
     if (event == "CHAT_MSG_ADDON") then
@@ -335,10 +337,15 @@ Frame:SetScript("OnEvent", function(_, event, ...)
             end
         end
         if (prefix=="LFMCFV" and Options.DEBUG_MODE) then
-            if(addon_users.sender ~= true) then
+            if(addon_users[sender] ~= sender) then
                 printMessageToLfmWindow('|cFF00FF00'..sender..' is using addon version: '..message..'|r')
-                addon_users.sender = true
+                addon_users[sender] = sender
+            else
+                addon_users[sender] = sender
             end
+
+            --printMessageToLfmWindow('|cFF00FF00'..sender..' is using addon version: '..message..'|r')
+
 
         end
     end
@@ -383,6 +390,47 @@ function printMessageToLfmWindow(output)
     end
     if (not lfgOutputFound and not hasWarnedAboutChatName) then
         print('Did not find any chat windows named "LFM", please create one')
+        hasWarnedAboutChatName = true
+    end
+end
+
+function printMessageToNotLfmWindow(output)
+    local lfgOutputFound = false
+    for i = 1, NUM_CHAT_WINDOWS do
+        if (GetChatWindowInfo(i)=="notlfm" or GetChatWindowInfo(i)=="NOTLFM") then
+            lfgOutputFound = true
+            -- don't know how to specify correct chat frame without hard coding. please don't judge me
+            if (i==1) then
+                ChatFrame1:AddMessage(output)
+            end
+            if (i==2) then
+                ChatFrame2:AddMessage(output)
+            end
+            if (i==3) then
+                ChatFrame3:AddMessage(output)
+            end
+            if (i==4) then
+                ChatFrame4:AddMessage(output)
+            end
+            if (i==5) then
+                ChatFrame5:AddMessage(output)
+            end
+            if (i==6) then
+                ChatFrame6:AddMessage(output)
+            end
+            if (i==7) then
+                ChatFrame7:AddMessage(output)
+            end
+            if (i==8) then
+                ChatFrame8:AddMessage(output)
+            end
+            if (i==9) then
+                ChatFrame9:AddMessage(output)
+            end
+        end
+    end
+    if (not lfgOutputFound and not hasWarnedAboutChatName) then
+        print('Did not find any chat windows named "NOTLFM", please create one')
         hasWarnedAboutChatName = true
     end
 end
@@ -456,6 +504,11 @@ local function removeBlizzIcons(text)
     return textWithoutIcons
 end
 
+local srep = string.rep
+local function rpadLFM (s, l, c)
+    local res = s .. srep(c or ' ', l - #s)
+    return res, res ~= s
+end
 
 function ParseMessageCFA(sender, chatMessage, channel,network)
 
@@ -470,13 +523,13 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
     for _ in pairs(messageList) do messageListActualSize = messageListActualSize + 1 end
     for i = 0, messageListActualSize do
         if (messageList[i] == chatMessage) then
-            return false
+            return nil
         end
     end
 
 	local lowerMessage = chatMessage:lower()
-	if (HasLFMTagCFA(lowerMessage) or (Options.always_include_LFG_messages or (GetNumGroupMembers()>1 and GetNumGroupMembers()<5) and HasLFGTagCFA(lowerMessage))) then
-        if(Options.hide_xp_runs == true) then
+	if (HasLFMTagCFA(lowerMessage) or (Options.include_LFG_messages_in_addition_to_LFM or (GetNumGroupMembers()>1 and GetNumGroupMembers()<5) and HasLFGTagCFA(lowerMessage))) then
+        if(Options.hide_XP_runs == true) then
             if (hasXPRunTags(lowerMessage)) then
                 if(Options.DEBUG_MODE) then
                     print('DEBUG: not showing message because it has XP run tags '..chatMessage)
@@ -484,7 +537,7 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
                 return false
             end
         end
-        if (Options.hide_cleave_runs == true) then
+        if (Options.hide_cleave_and_AOE_runs == true) then
             if (hasCleaveTags(lowerMessage)) then
                 if(Options.DEBUG_MODE) then
                     print('DEBUG: not showing message because it has Cleave run tags '..chatMessage)
@@ -522,22 +575,25 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
         if ( dungeonInMessage ~= false or (isQuestFromLogInText(lowerMessage))) then
             hasWarnedAboutFullGroup = false
             pushToMessageList(chatMessage)
-            local link = "|cffffc0c0|Hplayer:"..sender.."|h["..sender.."]|h|r";
-            local j,k = string.find(lowerMessage,dungeonInMessage)
-            local newMessage = string.sub(chatMessage,0,(j-1)).."|cffffc0FF"..string.sub(chatMessage,j,k).."|r"..string.sub(chatMessage,k+1,chatMessage:len())
+            local link = "|cffffc0c0|Hplayer:"..sender.."|h["..sender.."]|h|r:";
+            local j,k = string.find(lowerMessage,dungeonInMessage:lower())
+            local newMessage = string.sub(chatMessage,0,(j-1)).."|cffffc0FF"..string.sub(chatMessage,j,k):upper().."|r"..string.sub(chatMessage,k+1,chatMessage:len())
             --local output = "|cffffc0FF["..dungeonInMessage:upper().."]"
             local output = ""
-            if (Options.show_time_stamp) then
+            if (Options.show_time_stamp_on_messages) then
                 local hours,minutes = GetGameTime();
                 output = (output.."["..hours..":"..minutes.."] ")
             end
-            output = output..link..": "..newMessage
-            if (Options.always_show_channel or (Options.only_show_channel_if_from_other_player and network=="true") ) then
+            output = output..link.." "..newMessage
+            if (Options.display_channel_on_all_messages or (Options.display_channel_if_from_other_addon_user and network=="true") ) then
                 output = output.." ["..channel.."]";
             end
             printMessageToLfmWindow(removeBlizzIcons(output))
+            return true
         end
+        return false
 	end
+    return false
 end
 
 function HasLFMTagCFA(text)
@@ -554,7 +610,7 @@ function HasLFMTagCFA(text)
         "looking for more"
     }
     for _, tag in pairs(lfmTags) do
-        if (string.find(text, tag)) then
+        if (string.find(text:lower(), tag)) then
             return true
         end
     end
@@ -568,10 +624,12 @@ function HasLFGTagCFA(text)
     return false
 end
 
-
 function ArrayContainsValueCFA(array, val)
     for index, value in ipairs(array) do
         if value == val then
+            return true
+        end
+        if value:gsub('[%p%c%s]', '') == val then
             return true
         end
     end
@@ -579,16 +637,17 @@ function ArrayContainsValueCFA(array, val)
 end
 
 function HasDungeonAbbreviationCFA(chatMessage)
+    local lowerChatMessage = chatMessage:lower()
     local level = UnitLevel("player")
-    if (not Options.show_all_LFM_messages) then
+    if (not Options.include_dungeons_outside_of_level_range) then
         for key, dungeon in pairs(GetDungeonsByLevelCFA(level)) do
             if (containsTextFromArray(Dungeons[key].Name,disabledDungeons)) then
                 return false
             end
             for _, abbreviation in pairs(dungeon.Abbreviations) do
                 words = {}
-                for word in chatMessage:gmatch("%w+") do table.insert(words, word) end
-                if (ArrayContainsValueCFA(words, abbreviation)) then
+                for word in lowerChatMessage:gmatch("%w+") do table.insert(words, word) end
+                if (ArrayContainsValueCFA(words, abbreviation:lower())) then
                     return abbreviation
                 end
             end
@@ -597,8 +656,8 @@ function HasDungeonAbbreviationCFA(chatMessage)
         for key, dungeon in pairs(Dungeons) do
             for _, abbreviation in pairs(dungeon.Abbreviations) do
                 words = {}
-                for word in chatMessage:gmatch("%w+") do table.insert(words, word) end
-                if (ArrayContainsValueCFA(words, abbreviation)) then
+                for word in lowerChatMessage:gmatch("%w+") do table.insert(words, word) end
+                if (ArrayContainsValueCFA(words, abbreviation:lower())) then
                     return abbreviation
                 end
             end
@@ -633,35 +692,35 @@ function GetDungeonsByLevelCFA(level)
     return dungeonsForLevel
 end
 
--- Dungeon defining stole shamelessly from ClassicLFG addon
 
+-- Dungeon defining stole shamelessly from ClassicLFG addon
 DefineDungeonCFA("Ragefire Chasm", 5, 13, 18, "Orgrimmar", "rfc", {"rfc", "ragefire"})
-DefineDungeonCFA("Wailing Caverns", 5, 17, 24, "Barrens", "wc", {"wc","wailing caverns"})
-DefineDungeonCFA("The Deadmines", 5, 17, 24, "Westfall", "vc", {"dm", "vc", "deadmines"})
+DefineDungeonCFA("Wailing Caverns", 5, 17, 24, "Barrens", "wc", {"wc","wailing"})
+DefineDungeonCFA("The Deadmines", 5, 17, 24, "Westfall", "vc", {"vc", "deadmines"})
 DefineDungeonCFA("Shadowfang Keep", 5, 21, 30, "Silverpine Forest", "sfk", {"sfk", "shadowfang"})
-DefineDungeonCFA("Blackfathom Deeps", 5, 22, 32, "Ashenvale", "bfd", {"bfd","blackfathom deeps"})
+DefineDungeonCFA("Blackfathom Deeps", 5, 22, 32, "Ashenvale", "bfd", {"bfd","blackfathom"})
 DefineDungeonCFA("The Stockades", 5, 22, 30, "Stormwind", "stockades", {"stockades", "stocks","stockade"})
-DefineDungeonCFA("Gnomeregan", 5, 28, 38, "Dun Morogh", "gnomergan", {"gnomeregan", "gnomer"})
+DefineDungeonCFA("Gnomeregan", 5, 28, 38, "Dun Morogh", "gnomergan", {"gnomeregan", "gnomer","gnome"})
 DefineDungeonCFA("Razorfen Kraul", 5, 27, 39, "Barrens", "rfk", {"rfk", "kraul"})
-DefineDungeonCFA("The Scarlet Monastery: Graveyard", 5, 28, 38, "Tirisfal Glades", "sm graveyard", {"sm gy","grave","graveyard"})
-DefineDungeonCFA("The Scarlet Monastery: Library", 5, 30, 39, "Tirisfal Glades", "sm library", {"sm", "lib","library"})
-DefineDungeonCFA("The Scarlet Monastery: Armory", 5, 32, 42, "Tirisfal Glades", "sm armory", {"sm","arms","arm"})
-DefineDungeonCFA("The Scarlet Monastery: Cathedral", 5, 34, 44, "Tirisfal Glades", "sm cathedral", {"sm","cath"})
-DefineDungeonCFA("Razorfen Downs", 5, 36, 46, "Barrens", "rfd", {"rfd","razorfen downs"})
+DefineDungeonCFA("The Scarlet Monastery: Graveyard", 5, 28, 44, "Tirisfal Glades", "sm graveyard", {"grave","graveyard","sm","scarlet"})
+DefineDungeonCFA("The Scarlet Monastery: Library", 5, 30, 44, "Tirisfal Glades", "sm library", {"lib","library","sm","scarlet"})
+DefineDungeonCFA("The Scarlet Monastery: Armory", 5, 32, 44, "Tirisfal Glades", "sm armory", {"arms","arm","sm","scarlet"})
+DefineDungeonCFA("The Scarlet Monastery: Cathedral", 5, 34, 44, "Tirisfal Glades", "sm cathedral", {"cath","cathedral","scarlet","sm"})
+DefineDungeonCFA("Razorfen Downs", 5, 36, 46, "Barrens", "rfd", {"rfd","razorfen","downs"})
 DefineDungeonCFA("Uldaman", 5, 41, 52, "Badlands", "ulda", {"ulda","uldaman"})
-DefineDungeonCFA("Zul'Farak", 5, 42, 54, "Tanaris", "zf", {"zf","zul'farak"})
+DefineDungeonCFA("Zul'Farak", 5, 42, 54, "Tanaris", "zf", {"zf","zul","farak","farrak"})
 DefineDungeonCFA("Maraudon", 5, 44, 54, "Desolace", "maraudon", {"maraudon", "mara"})
-DefineDungeonCFA("Temple of Atal'Hakkar", 5, 47, 60, "Swamp of Sorrows", "st", {"st", "toa", "atal", "sunken temple"})
-DefineDungeonCFA("Blackrock Depths", 5, 49, 60, "Blackrock Mountain", "brd", {"brd","moira","lava run","blackrock depths","arena", "anger","golem"})
+DefineDungeonCFA("Temple of Atal'Hakkar", 5, 47, 60, "Swamp of Sorrows", "st", {"st", "toa", "atal", "sunken"})
+DefineDungeonCFA("Blackrock Depths", 5, 49, 60, "Blackrock Mountain", "brd", {"blackrock", "depths","brd","moira","lava","arena", "anger","golem","jailbreak","jailbreack","angerforge"})
 DefineDungeonCFA("Lower Blackrock Spire", 10, 55, 60, "Blackrock Mountain", "lbrs", {"lbrs","lower blackrock spire"})
-DefineDungeonCFA("Upper Blackrock Spire", 10, 55, 60, "Blackrock Mountain", "ubrs", {"ubrs","upper blackrock spire"})
+DefineDungeonCFA("Upper Blackrock Spire", 10, 55, 60, "Blackrock Mountain", "ubrs", {"ubrs","upper blackrock spire","rend"})
 -- ToDo: Need to add all the Dungeon parts once they are released on Classic Realms
---ClassicLFG:DefineDungeon("Dire Maul", 55, 60, "Feralas", {"dm:"})
+DefineDungeonCFA("Dire Maul", 5, 56, 60, "Feralas", "Dire", {"dire","dm","tribute","maul","diremaul","dme","dmn","dmw"})
 --
-DefineDungeonCFA("Stratholme", 5, 56, 60, "Eastern Plaguelands", "strat", {"strat","stratholme","start","living"," ud ","undead"})
+DefineDungeonCFA("Stratholme", 5, 56, 60, "Eastern Plaguelands", "strat", {"strat","stratholme","start"," living"," ud ","undead","Startholme"})
 DefineDungeonCFA("Scholomance", 5, 56, 60, "Eastern Plaguelands", "scholo", {"scholo","scholomance"})
-DefineDungeonCFA("Molten Core", 40, 60, 60, "Blackrock Depths", "mc", {"mc","molten core"})
-DefineDungeonCFA("Onyxia's Lair", 40, 60, 60, "Dustwallow Marsh", "ony", {"ony", "onyxia","onyxia's lair"})
+DefineDungeonCFA("Molten Core", 40, 60, 60, "Blackrock Depths", "mc", {"mc","molten"})
+DefineDungeonCFA("Onyxia's Lair", 40, 60, 60, "Dustwallow Marsh", "ony", {"ony", "onyxia","onyxia's"})
 
 print("Possible dungeons for your level: ")
 for key, dungeon in pairs(GetDungeonsByLevelCFA(UnitLevel("player"))) do
