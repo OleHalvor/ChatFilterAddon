@@ -10,7 +10,7 @@ Latest version is 0.9: https://github.com/OleHalvor/ChatFilterAddon/releases/dow
 
 1. Install the latest released version: https://github.com/OleHalvor/ChatFilterAddon/releases/download/0.9/ChatFilterAddon.zip
 2. Create a new chat window named "LFM".
-#### Enjoy a cleaner channel without spam for dungeons you can't join :)
+#### Enjoy a cleaner window without spam for dungeons you can't join :)
 
 NB: YOU need to create the chat window named LFM yourself
 
