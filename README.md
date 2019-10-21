@@ -27,5 +27,4 @@ If it doesn't seem to be working
 - Make sure you have joined relevant channels like "world" and "LookingForMore". You can go into the chat winow settings and un-check them, the addon works as long as you have joined them, and not left
 
 ### Known Issues
-- Scarlet Monestary is hard to classify correctly, you may see CATH even though you are too low level.
-- Settings are not saved between relog
+- Scarlet Monestary is hard to classify correctly, you may see CATH even though you are too low level, or GRAVE even if you are too high.
