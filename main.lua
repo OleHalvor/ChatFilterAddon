@@ -261,6 +261,8 @@ local function spamAllHiddenChannels(networkMessage)
             C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"CHANNEL",i)
         end
     end
+    success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"GUILD")
+    success = C_ChatInfo.SendAddonMessage("LFMCFV", versionNumber,"GUILD")
 end
 
 local function mysplit (inputstr, sep)
