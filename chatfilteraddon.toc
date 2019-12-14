@@ -1,6 +1,6 @@
 ## Interface: 11303
 ## Title: ChatFilterAddon
-## Author: Me
+## Author: Tryllemann
 ## Version: 0.9.3
 ##SavedVariablesPerCharacter: ChatFilterAddon_Options
 

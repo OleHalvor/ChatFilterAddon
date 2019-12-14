@@ -1,4 +1,4 @@
-print('ChatFilterAddon Loaded!')
+print("ChatFilterAddon By Tryllemann Loaded")
 
 local messageList = {"melding -2", "melding -1", "melding 0", "melding 1", "melding 2", "melding 3"}
 local messageListSize = 0 -- this is calculated, size is defined by array above
@@ -29,6 +29,7 @@ local function printMessageList()
         print('message '..i..': '..messageList[i])
     end
 end
+
 
 local Name,AddOn=...;
 local Title=select(2,GetAddOnInfo(Name));
