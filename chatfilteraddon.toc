@@ -1,7 +1,7 @@
 ## Interface: 11303
 ## Title: ChatFilterAddon
 ## Author: Me
-## Version: 0.9.0
+## Version: 0.9.3
 ##SavedVariablesPerCharacter: ChatFilterAddon_Options
 
 main.lua

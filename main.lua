@@ -6,7 +6,7 @@ for _ in pairs(messageList) do messageListSize = messageListSize + 1 end
 local lastMessageListUpdateTime = time()
 local messageListClearInterval = 60
 local serverTag = ""
-local versionNumber = "0.9.0"
+local versionNumber = "0.9.3"
 local hasWarnedAboutFullGroup = false
 
 local function pushToMessageList (message)
@@ -318,7 +318,7 @@ Frame:SetScript("OnEvent", function(_, event, ...)
         end
     end
 
-    if (event == "CHAT_MSG_ADDON") then
+    if (event == "CHAT_MSG_ADDON" or event == "CHAT_MSG_GUILD" ) then
         local prefix, message, type, sender, _, _, _, _, _ = ...
         if (prefix=="LFMCF") then
             if ( not (UnitName("player")==sender or UnitName("player")..'-'..serverTag==sender) ) then
@@ -553,11 +553,7 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
             end
             networkMessage=sender..";"..UnitName("player")..";"..channel..";"..chatMessage
             success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage)
-
-            local guildName, guildRankName, guildRankIndex = GetGuildInfo("player");
-            if (not guildName == nil) then
-                success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"GUILD")
-            end
+            success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"GUILD")
             spamAllHiddenChannels(networkMessage)
         end
 
