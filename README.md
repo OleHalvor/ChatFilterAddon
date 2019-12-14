@@ -3,6 +3,9 @@
 ## USE THIS DOWNLOAD LINK: 
 ### https://github.com/OleHalvor/ChatFilterAddon/releases/download/0.9.3/ChatFilterAddon.zip
 
+Example of what it may look like at LVL 60
+![](https://i.imgur.com/HLVvzoC.png)
+
 ## Main Features of this addon:
 1. Scans all of your joined chat channels for relevant dungeons and copies those messages to a seperate chat window named "LFM"
 2. Shares messages with other users of the addon. If someone whith this addon is in a city and someone types "LFM BRD" in [Trade - City], you will also see this message in your LFM window, regardless of where you are. EDIT: API Has updated, now only uses GUILD chat
