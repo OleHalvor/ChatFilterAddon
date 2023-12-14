@@ -116,10 +116,11 @@ end)
 local function CreateCustomChatWindow()
     -- Create the main frame
     local frame = CreateFrame("Frame", "CustomChatFrame", UIParent)
-    frame:SetSize(300, 200) -- Width, Height
-    frame:SetPoint("CENTER") -- Position on the screen
-    frame:SetMovable(true)
-    frame:EnableMouse(true)
+    local isLocked = true  -- Initial state
+    frame:SetMovable(not isLocked)
+    frame:EnableMouse(not isLocked)
+    frame:SetSize(300, 100) -- Width, Height
+    frame:SetPoint("BOTTOMRIGHT",0,100) -- Position on the screen
     frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", frame.StartMoving)
     frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
@@ -140,6 +141,44 @@ local function CreateCustomChatWindow()
     messageFrame:SetHyperlinksEnabled(true)
 
     scrollFrame:SetScrollChild(messageFrame)
+
+    frame:SetScript("OnSizeChanged", function(self)
+        messageFrame:SetWidth(scrollFrame:GetWidth())
+        messageFrame:SetHeight(scrollFrame:GetHeight())
+    end)
+
+    -- Lock Button
+    local lockButton = CreateFrame("Button", nil, frame)
+    lockButton:SetPoint("TOPRIGHT", -10, 10)
+    lockButton:SetSize(32, 32)
+    lockButton:SetNormalTexture("Interface\\Buttons\\LockButton-Unlocked-Up")
+    lockButton:SetHighlightTexture("Interface\\Buttons\\LockButton-Unlocked-Highlight")
+    lockButton:SetPushedTexture("Interface\\Buttons\\LockButton-Unlocked-Down")
+
+
+
+    lockButton:SetScript("OnClick", function()
+        isLocked = not isLocked
+        frame:SetMovable(not isLocked)
+        frame:EnableMouse(not isLocked)
+        -- Change the texture based on the lock state
+        lockButton:SetNormalTexture(isLocked and "Interface\\Buttons\\LockButton-Locked-Up" or "Interface\\Buttons\\LockButton-Unlocked-Up")
+        lockButton:SetHighlightTexture(isLocked and "Interface\\Buttons\\LockButton-Locked-Up" or "Interface\\Buttons\\LockButton-Locked-Highlight")
+        lockButton:SetPushedTexture(isLocked and "Interface\\Buttons\\LockButton-Locked-Up" or "Interface\\Buttons\\LockButton-Locked-Down")
+    end)
+
+    -- Gear Button for Options
+    local gearButton = CreateFrame("Button", nil, frame)
+    gearButton:SetPoint("TOPRIGHT", lockButton, "TOPLEFT", -4, 0)
+    gearButton:SetSize(24, 24)
+    gearButton:SetNormalTexture("Interface\\Buttons\\UI-OptionsButton")
+    gearButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
+    gearButton:SetScript("OnClick", function()
+        -- Open the Interface Options to your addon's panel
+        InterfaceOptionsFrame_OpenToCategory("ChatFilterAddon")
+        InterfaceOptionsFrame_OpenToCategory("ChatFilterAddon")  -- Call twice to ensure it navigates correctly
+    end)
+
 
 
     -- Function to add messages to the ScrollingMessageFrame
@@ -175,14 +214,10 @@ local function CreateCustomChatWindow()
 end
 
 -- Usage example
-local myCustomChatWindow = CreateCustomChatWindow()
-myCustomChatWindow:AddMessage("Welcome to the custom chat window!")
 
 
--- Example: Use this function to add messages to the custom chat window
-function AddMessageToCustomChatWindow(message)
-    myCustomChatWindow:AddMessage(message)
-end
+
+
 
 
 
@@ -515,5 +550,9 @@ for key, dungeon in pairs(GetDungeonsByLevelCFA(UnitLevel("player"))) do
     print(key)
 end
 
-
-
+local myCustomChatWindow = CreateCustomChatWindow()
+myCustomChatWindow:AddMessage("Welcome to the custom chat window!")
+-- Example: Use this function to add messages to the custom chat window
+function AddMessageToCustomChatWindow(message)
+    myCustomChatWindow:AddMessage(message)
+end

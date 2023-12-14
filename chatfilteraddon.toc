@@ -3,7 +3,8 @@
 ## Author: Tryllemann
 ## Version: 0.9.4
 ##SavedVariablesPerCharacter: ChatFilterAddon_Options
+## SavedVariables: ChatFilterAddonDB
 
 UtilityFunctions.lua
-main.lua
 ChatFilterAddon_Options.lua
+main.lua

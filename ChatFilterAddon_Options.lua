@@ -35,7 +35,8 @@ local Defaults = {
     keep_looking_while_in_full_group = false,
     DEBUG_MODE = false,
     display_channel_if_from_other_addon_user = true,
-    include_LFG_messages_in_addition_to_LFM = false
+    include_LFG_messages_in_addition_to_LFM = false,
+    lock_window=false
 };
 
 ChatFilterAddon_Options = SyncOptions(ns.Options, Defaults);
