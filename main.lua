@@ -114,82 +114,43 @@ end)
 
 function printMessageToLfmWindow(output)
     local lfgOutputFound = false
+    local windowNameToFind = "p"
+
+    -- Loop through chat windows to find the one named "LFM" or "P"
     for i = 1, NUM_CHAT_WINDOWS do
-        if (GetChatWindowInfo(i) == "p" or GetChatWindowInfo(i) == "P") then
-            --if (GetChatWindowInfo(i)=="lfm" or GetChatWindowInfo(i)=="LFM") then
+        local windowName = GetChatWindowInfo(i)
+        if windowName:lower() == windowNameToFind:lower() then
             lfgOutputFound = true
-            if (i == 1) then
-                ChatFrame1:AddMessage(output)
-            end
-            if (i == 2) then
-                ChatFrame2:AddMessage(output)
-            end
-            if (i == 3) then
-                ChatFrame3:AddMessage(output)
-            end
-            if (i == 4) then
-                ChatFrame4:AddMessage(output)
-            end
-            if (i == 5) then
-                ChatFrame5:AddMessage(output)
-            end
-            if (i == 6) then
-                ChatFrame6:AddMessage(output)
-            end
-            if (i == 7) then
-                ChatFrame7:AddMessage(output)
-            end
-            if (i == 8) then
-                ChatFrame8:AddMessage(output)
-            end
-            if (i == 9) then
-                ChatFrame9:AddMessage(output)
-            end
+            local chatFrame = _G["ChatFrame" .. i]
+            chatFrame:AddMessage(output)
+            break -- Stop the loop as we found the window
         end
     end
-    if (not lfgOutputFound and not hasWarnedAboutChatName) then
-        print('Did not find any chat windows named "LFM", please create one')
+
+    if not lfgOutputFound and not hasWarnedAboutChatName then
+        print('Did not find any chat windows named "' .. windowNameToFind .. '", please create one')
         hasWarnedAboutChatName = true
     end
 end
 
-function printMessageToNotLfmWindow(output)
+
+function printMessageToLfmWindow(output)
     local lfgOutputFound = false
+    local windowNameToFind = "notlfm"
+
+    -- Loop through chat windows to find the one named "LFM" or "P"
     for i = 1, NUM_CHAT_WINDOWS do
-        if (GetChatWindowInfo(i) == "notlfm" or GetChatWindowInfo(i) == "NOTLFM") then
+        local windowName = GetChatWindowInfo(i)
+        if windowName:lower() == windowNameToFind:lower() then
             lfgOutputFound = true
-            -- don't know how to specify correct chat frame without hard coding. please don't judge me
-            if (i == 1) then
-                ChatFrame1:AddMessage(output)
-            end
-            if (i == 2) then
-                ChatFrame2:AddMessage(output)
-            end
-            if (i == 3) then
-                ChatFrame3:AddMessage(output)
-            end
-            if (i == 4) then
-                ChatFrame4:AddMessage(output)
-            end
-            if (i == 5) then
-                ChatFrame5:AddMessage(output)
-            end
-            if (i == 6) then
-                ChatFrame6:AddMessage(output)
-            end
-            if (i == 7) then
-                ChatFrame7:AddMessage(output)
-            end
-            if (i == 8) then
-                ChatFrame8:AddMessage(output)
-            end
-            if (i == 9) then
-                ChatFrame9:AddMessage(output)
-            end
+            local chatFrame = _G["ChatFrame" .. i]
+            chatFrame:AddMessage(output)
+            break -- Stop the loop as we found the window
         end
     end
-    if (not lfgOutputFound and not hasWarnedAboutChatName) then
-        print('Did not find any chat windows named "NOTLFM", please create one')
+
+    if not lfgOutputFound and not hasWarnedAboutChatName then
+        print('Did not find any chat windows named "' .. windowNameToFind .. '", please create one')
         hasWarnedAboutChatName = true
     end
 end
@@ -299,7 +260,6 @@ end
 
 
 function ParseMessageCFA(sender, chatMessage, channel)
-    local currentTime = time()
     local lowerMessage = chatMessage:lower()
 
     local messageExists = false
