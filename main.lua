@@ -1,8 +1,9 @@
 print("ChatFilterAddon By Tryllemann Loaded")
 
+local addon, ns = ...
+
 local messageList = {"melding -2", "melding -1", "melding 0", "melding 1", "melding 2", "melding 3"}
-local messageListSize = 0 -- this is calculated, size is defined by array above
-for _ in pairs(messageList) do messageListSize = messageListSize + 1 end
+local messageListSize = #messageList
 local lastMessageListUpdateTime = time()
 local messageListClearInterval = 60
 local serverTag = ""
@@ -10,8 +11,7 @@ local versionNumber = "0.9.3"
 local hasWarnedAboutFullGroup = false
 
 local function pushToMessageList (message)
-    local tableLengthInt = 0
-    for _ in pairs(messageList) do tableLengthInt = tableLengthInt + 1 end
+    local tableLengthInt = #messageList
     if (tableLengthInt >= messageListSize) then
         for i=1, (tableLengthInt-1) do
             messageList[i] = messageList[i+1]
@@ -22,8 +22,7 @@ local function pushToMessageList (message)
 end
 
 local function printMessageList()
-    local tableLengthInt = 0
-    for _ in pairs(messageList) do tableLengthInt = tableLengthInt + 1 end
+    local tableLengthInt = #messageList
     print('printing message list: ')
     for i = 1, tableLengthInt do
         print('message '..i..': '..messageList[i])
@@ -215,22 +214,6 @@ local function isQuestFromLogInText(text)
     return false
 end
 
-local function containsText(message,text)
-    if (string.find(message:lower(),text:lower() )) then
-        return true
-    end
-    return false
-end
-
-local function containsTextFromArray(message,array)
-    for _, var in pairs(array) do
-        if (containsText(message,var)) then
-            return true
-        end
-    end
-    return false
-end
-
 print(getQuestsInLog())
 
 local function getLFMAddonChannelIndex()
@@ -264,29 +247,12 @@ local function spamAllHiddenChannels(networkMessage)
     --success = C_ChatInfo.SendAddonMessage("LFMCFV", versionNumber,"GUILD")
 end
 
-local function mysplit (inputstr, sep)
-    if sep == nil then
-        sep = "%s"
-    end
-    local t={}
-    for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
-        table.insert(t, str)
-    end
-    return t
-end
-
-local function tablelength(T)
-    local count = 0
-    for _ in pairs(T) do count = count + 1 end
-    return count
-end
-
 local function hasXPRunTags(message)
     xpTags = {
         "xp",
         "exp"
     }
-    if (containsTextFromArray(message,xpTags)) then
+    if (ns.Utility.containsTextFromArray(message,xpTags)) then
         return true
     end
     return false
@@ -298,7 +264,7 @@ local function hasCleaveTags(message)
         "spellcleave",
         "aoe"
     }
-    if (containsTextFromArray(message,cleaveTags)) then
+    if (ns.Utility.containsTextFromArray(message,cleaveTags)) then
         return true
     end
     return false
@@ -325,14 +291,14 @@ Frame:SetScript("OnEvent", function(_, event, ...)
         local prefix, message, type, sender, _, _, _, _, _ = ...
         if (prefix=="LFMCF") then
             if ( not (UnitName("player")==sender or UnitName("player")..'-'..serverTag==sender) ) then
-                words = mysplit(message,";")
+                words = ns.Utility.mysplit(message,";")
                 if (Options.DEBUG_MODE==true) then
                     channelPlusNetworkSender=words[3].." - "..words[2]
                 else
                     channelPlusNetworkSender=words[3]
                 end
 
-                if (tablelength(words) >= 4) then
+                if (ns.Utility.tablelength(words) >= 4) then
                     ParseMessageCFA(words[1], words[4], channelPlusNetworkSender,"true")
                 else
                     print('received message from other client which did not parse: '..message)
@@ -493,17 +459,17 @@ local function removeBlizzIcons(text)
         "{Star}"
         }
     for _, var in pairs(icons) do
-        if (containsText(text,var)) then
+        if (ns.Utility.containsText(text,var)) then
             textWithoutIcons = textWithoutIcons:gsub(("%"..var)," ")
         end
     end
     for _, var in pairs(icons) do
-        if (containsText(text,var:upper())) then
+        if (ns.Utility.containsText(text,var:upper())) then
             textWithoutIcons = textWithoutIcons:gsub(("%"..var:upper())," ")
         end
     end
     for _, var in pairs(icons) do
-        if (containsText(text,var:lower())) then
+        if (ns.Utility.containsText(text,var:lower())) then
             textWithoutIcons = textWithoutIcons:gsub(("%"..var:lower())," ")
         end
     end
@@ -528,8 +494,7 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
         lastMessageListUpdateTime = time()
     end
 
-    local messageListActualSize = 0
-    for _ in pairs(messageList) do messageListActualSize = messageListActualSize + 1 end
+    local messageListActualSize = #messageList
     for i = 0, messageListActualSize do
         if (messageList[i] == chatMessage) then
             return nil
@@ -646,7 +611,7 @@ function HasDungeonAbbreviationCFA(chatMessage)
     local level = UnitLevel("player")
     if (not Options.include_dungeons_outside_of_level_range) then
         for key, dungeon in pairs(GetDungeonsByLevelCFA(level)) do
-            if (containsTextFromArray(Dungeons[key].Name,disabledDungeons)) then
+            if (ns.Utility.containsTextFromArray(Dungeons[key].Name,disabledDungeons)) then
                 return false
             end
             for _, abbreviation in pairs(dungeon.Abbreviations) do
