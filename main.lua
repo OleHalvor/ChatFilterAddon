@@ -112,6 +112,80 @@ Frame:SetScript("OnEvent", function(_, event, ...)
     end
 end)
 
+
+local function CreateCustomChatWindow()
+    -- Create the main frame
+    local frame = CreateFrame("Frame", "CustomChatFrame", UIParent)
+    frame:SetSize(300, 200) -- Width, Height
+    frame:SetPoint("CENTER") -- Position on the screen
+    frame:SetMovable(true)
+    frame:EnableMouse(true)
+    frame:RegisterForDrag("LeftButton")
+    frame:SetScript("OnDragStart", frame.StartMoving)
+    frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
+
+    -- Create ScrollFrame as a child of the main frame
+    local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
+    scrollFrame:SetPoint("TOPLEFT", 10, -10)
+    scrollFrame:SetPoint("BOTTOMRIGHT", -10, 10)
+
+    -- Create the ScrollingMessageFrame
+    local messageFrame = CreateFrame("ScrollingMessageFrame", nil, scrollFrame)
+    messageFrame:SetSize(280, 180) -- Width, Height
+    messageFrame:SetFontObject("ChatFontNormal")
+    messageFrame:SetJustifyH("LEFT")
+    messageFrame:SetFading(false)
+    -- Event handler for hyperlinks
+    messageFrame:SetScript("OnHyperlinkClick", ChatFrame_OnHyperlinkShow)
+    messageFrame:SetHyperlinksEnabled(true)
+
+    scrollFrame:SetScrollChild(messageFrame)
+
+
+    -- Function to add messages to the ScrollingMessageFrame
+    function frame:AddMessage(message)
+        messageFrame:AddMessage(message)
+    end
+
+    -- Resizing functionality
+    frame:SetResizable(true)
+
+    -- Resize Button
+    local resizeButton = CreateFrame("Button", nil, frame)
+    resizeButton:SetPoint("BOTTOMRIGHT", -6, 6)
+    resizeButton:SetSize(16, 16)
+    resizeButton:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+    resizeButton:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+    resizeButton:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+
+    resizeButton:SetScript("OnMouseDown", function(self, button)
+        if button == "LeftButton" then
+            frame:StartSizing("BOTTOMRIGHT")
+            self:GetHighlightTexture():Hide()
+        end
+    end)
+    resizeButton:SetScript("OnMouseUp", function(self)
+        frame:StopMovingOrSizing()
+        self:GetHighlightTexture():Show()
+        messageFrame:SetWidth(scrollFrame:GetWidth())
+        messageFrame:SetHeight(scrollFrame:GetHeight())
+    end)
+
+    return frame
+end
+
+-- Usage example
+local myCustomChatWindow = CreateCustomChatWindow()
+myCustomChatWindow:AddMessage("Welcome to the custom chat window!")
+
+
+-- Example: Use this function to add messages to the custom chat window
+function AddMessageToCustomChatWindow(message)
+    myCustomChatWindow:AddMessage(message)
+end
+
+
+
 function printMessageToLfmWindow(output)
     local lfgOutputFound = false
     local windowNameToFind = "p"
@@ -134,7 +208,7 @@ function printMessageToLfmWindow(output)
 end
 
 
-function printMessageToLfmWindow(output)
+function printMessageToNotLfmWindow(output)
     local lfgOutputFound = false
     local windowNameToFind = "notlfm"
 
@@ -219,7 +293,7 @@ local function removeBlizzIcons(text)
         end
     end
     if (text ~= textWithoutIcons and ns.Options.DEBUG_MODE) then
-        printMessageToLfmWindow("Fjernet blizz ikon! før var det: " .. text)
+        AddMessageToCustomChatWindow("Fjernet blizz ikon! før var det: " .. text)
     end
     return textWithoutIcons
 end
@@ -286,8 +360,8 @@ function ParseMessageCFA(sender, chatMessage, channel)
     -- Check if in a full group
     if not ns.Options.keep_looking_while_in_full_group and GetNumGroupMembers() == 5 then
         if not hasWarnedAboutFullGroup then
-            printMessageToLfmWindow("You're in a full group. LFM will be disabled")
-            printMessageToLfmWindow("If you still wish to look for LFM request this can be toggled in the settings")
+            AddMessageToCustomChatWindow("You're in a full group. LFM will be disabled")
+            AddMessageToCustomChatWindow("If you still wish to look for LFM request this can be toggled in the settings")
             hasWarnedAboutFullGroup = true
         end
         return false
@@ -302,7 +376,7 @@ function ParseMessageCFA(sender, chatMessage, channel)
 
         -- Format and print message
         local formattedMessage = formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage, channel)
-        printMessageToLfmWindow(removeBlizzIcons(formattedMessage))
+        AddMessageToCustomChatWindow(removeBlizzIcons(formattedMessage))
         return true
     end
     return false
