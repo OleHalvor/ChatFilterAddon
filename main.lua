@@ -133,9 +133,8 @@ local BuildButton; do--	function BuildButton(tbl,var,txt,x,y)
         local btn=CreateFrame("CheckButton",nil,Panel,"UICheckButtonTemplate");
         btn:SetPoint("TOPLEFT",x,y);
         local tempVar = var:gsub("%_"," ")
-        btn.text:SetText(txt or tempVar:gsub("^(.)",string.upper));
         btn:SetScript("OnClick",OnClick);
-
+        btn.Text:SetText(txt or tempVar:gsub("^(.)",string.upper));
         btn.Table=tbl;
         btn.Var=var;
         btn.Refresh=Refresh;
@@ -261,8 +260,8 @@ local function spamAllHiddenChannels(networkMessage)
             C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"CHANNEL",i)
         end
     end
-    success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"GUILD")
-    success = C_ChatInfo.SendAddonMessage("LFMCFV", versionNumber,"GUILD")
+    --success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"GUILD")
+    --success = C_ChatInfo.SendAddonMessage("LFMCFV", versionNumber,"GUILD")
 end
 
 local function mysplit (inputstr, sep)
@@ -305,6 +304,7 @@ local function hasCleaveTags(message)
     return false
 end
 
+
 local hasWarnedAboutChatName = false
 local DungeonList = {}
 local Dungeons = {}
@@ -321,7 +321,7 @@ Frame:SetScript("OnEvent", function(_, event, ...)
         end
     end
 
-    if (event == "CHAT_MSG_ADDON" or event == "CHAT_MSG_GUILD" ) then
+    if (event == "CHAT_MSG_ADDON") then
         local prefix, message, type, sender, _, _, _, _, _ = ...
         if (prefix=="LFMCF") then
             if ( not (UnitName("player")==sender or UnitName("player")..'-'..serverTag==sender) ) then
@@ -354,12 +354,18 @@ Frame:SetScript("OnEvent", function(_, event, ...)
     end
 end)
 
+local function GetPlayerLevel(sender)
+    local _, _, _, _, level = GetPlayerInfoByGUID(sender)
+    return level or 0
+end
+
+
 local hasSentVersionNumber = false
 
 function printMessageToLfmWindow(output)
     local lfgOutputFound = false
     for i = 1, NUM_CHAT_WINDOWS do
-        if (GetChatWindowInfo(i)=="lfm" or GetChatWindowInfo(i)=="LFM") then
+        if (GetChatWindowInfo(i)=="p" or GetChatWindowInfo(i)=="P") then --if (GetChatWindowInfo(i)=="lfm" or GetChatWindowInfo(i)=="LFM") then
             lfgOutputFound = true
             -- don't know how to specify correct chat frame without hard coding. please don't judge me
             if (i==1) then
@@ -556,7 +562,7 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
             end
             networkMessage=sender..";"..UnitName("player")..";"..channel..";"..chatMessage
             success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage)
-            success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"GUILD")
+            --success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"GUILD")
             spamAllHiddenChannels(networkMessage)
         end
 
@@ -700,7 +706,7 @@ DefineDungeonCFA("Shadowfang Keep", 5, 21, 30, "Silverpine Forest", "sfk", {"sfk
 DefineDungeonCFA("Blackfathom Deeps", 5, 22, 32, "Ashenvale", "bfd", {"bfd","blackfathom"})
 DefineDungeonCFA("The Stockades", 5, 22, 30, "Stormwind", "stockades", {"stockades", "stocks","stockade"})
 DefineDungeonCFA("Gnomeregan", 5, 28, 38, "Dun Morogh", "gnomergan", {"gnomeregan", "gnomer","gnome"})
-DefineDungeonCFA("Razorfen Kraul", 5, 27, 39, "Barrens", "rfk", {"rfk", "kraul"})
+DefineDungeonCFA("Razorfen Kraul", 5, 25, 39, "Barrens", "rfk", {"rfk", "kraul"})
 DefineDungeonCFA("The Scarlet Monastery: Graveyard", 5, 28, 44, "Tirisfal Glades", "sm graveyard", {"grave","graveyard","sm","scarlet"})
 DefineDungeonCFA("The Scarlet Monastery: Library", 5, 30, 44, "Tirisfal Glades", "sm library", {"lib","library","sm","scarlet"})
 DefineDungeonCFA("The Scarlet Monastery: Armory", 5, 32, 44, "Tirisfal Glades", "sm armory", {"arms","arm","sm","scarlet"})
