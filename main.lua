@@ -2,7 +2,7 @@ print("ChatFilterAddon By Tryllemann Loaded")
 
 local addon, ns = ...
 
-local messageList = {"melding -2", "melding -1", "melding 0", "melding 1", "melding 2", "melding 3"}
+local messageList = { "melding -2", "melding -1", "melding 0", "melding 1", "melding 2", "melding 3" }
 local messageListSize = #messageList
 local lastMessageListUpdateTime = time()
 local messageListClearInterval = 60
@@ -11,37 +11,39 @@ local versionNumber = "0.9.3"
 local hasWarnedAboutFullGroup = false
 
 local function pushToMessageList (message)
-    local tableLengthInt = #messageList
-    if (tableLengthInt >= messageListSize) then
-        for i=1, (tableLengthInt-1) do
-            messageList[i] = messageList[i+1]
-        end
+    if #messageList >= messageListSize then
+        table.remove(messageList, 1)
     end
-    messageList[tableLengthInt] = message
-    return messageList
+    table.insert(messageList, message)
 end
 
-local Name,AddOn=...;
-local Title=select(2,GetAddOnInfo(Name));
-local Version=GetAddOnMetadata(Name,"Version");
-local Options={};
-AddOn.Options=Options;
+local Name, AddOn = ...;
+local Title = select(2, GetAddOnInfo(Name));
+local Version = GetAddOnMetadata(Name, "Version");
+local Options = {};
+AddOn.Options = Options;
 
-local function SyncOptions(new,old,merge)
+local function SyncOptions(new, old, merge)
     --	This is practicly a table copy function to copy values from old to new
     --	new will always be the table modified and is the same table returned
     --	old shall always remain untouched
     --	merge controls if shared keys are overwritten
 
     --	Exception handling
-    if old==nil then return new; end--		If old is missing, return new
-    if type(old)~="table" then return old; end--	If old is non-table, return old
-    if type(new)~="table" then new={}; end--	If new is non-table, overwrite; proceed with copying of old
+    if old == nil then
+        return new;
+    end--		If old is missing, return new
+    if type(old) ~= "table" then
+        return old;
+    end--	If old is non-table, return old
+    if type(new) ~= "table" then
+        new = {};
+    end--	If new is non-table, overwrite; proceed with copying of old
 
-    for i,j in pairs(old) do
-        local val=rawget(new,i);
-        if merge or val==nil then
-            rawset(new,i,SyncOptions(val,j,merge));
+    for i, j in pairs(old) do
+        local val = rawget(new, i);
+        if merge or val == nil then
+            rawset(new, i, SyncOptions(val, j, merge));
         end
     end
     return new;
@@ -54,7 +56,6 @@ function try(f, catch_f)
     end
 end
 
-
 local disabledDungeons = {
     "The Scarlet Monastery: Library",
     "The Scarlet Monastery: Cathedral",
@@ -63,48 +64,49 @@ local disabledDungeons = {
 }
 disabledDungeons = {}
 
-local Defaults={
+local Defaults = {
     --include_dungeons_outside_of_level_range=true,
-    include_dungeons_outside_of_level_range=false,
-    show_time_stamp_on_messages=false,
-    display_channel_on_all_messages=false,
-    hide_XP_runs=false,
-    hide_cleave_and_AOE_runs=false,
-    keep_looking_while_in_full_group=false,
-    DEBUG_MODE=false,
-    display_channel_if_from_other_addon_user=true,
-    include_LFG_messages_in_addition_to_LFM=false
+    include_dungeons_outside_of_level_range = false,
+    show_time_stamp_on_messages = false,
+    display_channel_on_all_messages = false,
+    hide_XP_runs = false,
+    hide_cleave_and_AOE_runs = false,
+    keep_looking_while_in_full_group = false,
+    DEBUG_MODE = false,
+    display_channel_if_from_other_addon_user = true,
+    include_LFG_messages_in_addition_to_LFM = false
 };
 
-ChatFilterAddon_Options=SyncOptions(Options,Defaults);
+ChatFilterAddon_Options = SyncOptions(Options, Defaults);
 
 --------------------------
 --[[	Options Panel	]]
 --------------------------
-local Changes=SyncOptions({},Options);
-local Panel=CreateFrame("Frame");
-Panel.name=Title;
+local Changes = SyncOptions({}, Options);
+local Panel = CreateFrame("Frame");
+Panel.name = Title;
 
-do--	Title
+do
+    --	Title
     local txt;
 
-    local title=Panel:CreateFontString(nil,"OVERLAY","GameFontNormalLarge");
-    title:SetPoint("TOPLEFT",12,-12);
+    local title = Panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge");
+    title:SetPoint("TOPLEFT", 12, -12);
     title:SetText(Title);
 
-    local ver=Panel:CreateFontString(nil,"OVERLAY","GameFontNormalSmall");
-    ver:SetPoint("TOPLEFT",title,"TOPRIGHT",4,0);
-    ver:SetTextColor(0.5,0.5,0.5);
-    ver:SetText("v"..Version);
+    local ver = Panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall");
+    ver:SetPoint("TOPLEFT", title, "TOPRIGHT", 4, 0);
+    ver:SetTextColor(0.5, 0.5, 0.5);
+    ver:SetText("v" .. Version);
 end
 
 Panel:RegisterEvent("ADDON_LOADED");
-Panel:SetScript("OnEvent",function(self,event,...)
-    if event=="ADDON_LOADED" and (...)==Name then
-        ChatFilterAddon_Options=SyncOptions(Options,ChatFilterAddon_Options,true);
-        SyncOptions(Changes,Options,true);
-        serverTag=GetNormalizedRealmName();
-        if serverTag==nil then
+Panel:SetScript("OnEvent", function(self, event, ...)
+    if event == "ADDON_LOADED" and (...) == Name then
+        ChatFilterAddon_Options = SyncOptions(Options, ChatFilterAddon_Options, true);
+        SyncOptions(Changes, Options, true);
+        serverTag = GetNormalizedRealmName();
+        if serverTag == nil then
             serverTag = "Gandling"
         end
         self:UnregisterEvent(event);
@@ -114,51 +116,62 @@ end);
 ----------------------------------
 --[[	Options Controls	]]
 ----------------------------------
-local Buttons={};
-local BuildButton; do--	function BuildButton(tbl,var,txt,x,y)
-    local function OnClick(self) self.Table[self.Var]=self:GetChecked(); end
-    local function Refresh(self) self:SetChecked(self:IsEnabled() and self.Table[self.Var]); end
-    function BuildButton(tbl,var,txt,x,y)
-        local btn=CreateFrame("CheckButton",nil,Panel,"UICheckButtonTemplate");
-        btn:SetPoint("TOPLEFT",x,y);
-        local tempVar = var:gsub("%_"," ")
-        btn:SetScript("OnClick",OnClick);
-        btn.Text:SetText(txt or tempVar:gsub("^(.)",string.upper));
-        btn.Table=tbl;
-        btn.Var=var;
-        btn.Refresh=Refresh;
+local Buttons = {};
+local BuildButton;
+do
+    --	function BuildButton(tbl,var,txt,x,y)
+    local function OnClick(self)
+        self.Table[self.Var] = self:GetChecked();
+    end
+    local function Refresh(self)
+        self:SetChecked(self:IsEnabled() and self.Table[self.Var]);
+    end
+    function BuildButton(tbl, var, txt, x, y)
+        local btn = CreateFrame("CheckButton", nil, Panel, "UICheckButtonTemplate");
+        btn:SetPoint("TOPLEFT", x, y);
+        local tempVar = var:gsub("%_", " ")
+        btn:SetScript("OnClick", OnClick);
+        btn.Text:SetText(txt or tempVar:gsub("^(.)", string.upper));
+        btn.Table = tbl;
+        btn.Var = var;
+        btn.Refresh = Refresh;
 
-        Buttons[#Buttons+1]=btn;
+        Buttons[#Buttons + 1] = btn;
         return btn;
     end
 end
 
-do--	LinkButtons
-    local list={};
-    for i,j in pairs(Defaults) do list[#list+1]=i; end
+do
+    --	LinkButtons
+    local list = {};
+    for i, j in pairs(Defaults) do
+        list[#list + 1] = i;
+    end
     table.sort(list);
-    for i,j in ipairs(list) do
-        BuildButton(Changes,j,nil,16,-i*24-24);
+    for i, j in ipairs(list) do
+        BuildButton(Changes, j, nil, 16, -i * 24 - 24);
     end
 end
 
 --------------------------
 --[[	Panel Callbacks	]]
 --------------------------
-Panel.okay=function()
-    SyncOptions(Options,Changes,true);
+Panel.okay = function()
+    SyncOptions(Options, Changes, true);
     AddOn.RecompileLinks();
 end
-Panel.cancel=function()
-    SyncOptions(Changes,Options,true);
+Panel.cancel = function()
+    SyncOptions(Changes, Options, true);
 end
-Panel.default=function()
+Panel.default = function()
     --	Note, the defaults table may have dirty values since it lends its subtables to the options var if needed
-    SyncOptions(Options,Defaults,true);
-    SyncOptions(Changes,Defaults,true);
+    SyncOptions(Options, Defaults, true);
+    SyncOptions(Changes, Defaults, true);
 end
-Panel.refresh=function()
-    for i,j in ipairs(Buttons) do j:Refresh(); end
+Panel.refresh = function()
+    for i, j in ipairs(Buttons) do
+        j:Refresh();
+    end
 end
 
 ----------------------------------
@@ -166,19 +179,17 @@ end
 ----------------------------------
 InterfaceOptions_AddCategory(Panel);
 
-
 SLASH_ChatFilterAddon1 = "/lfm";
 function SlashCmdList.ChatFilterAddon(msg)
     InterfaceOptionsFrame_OpenToCategory(Panel);
     InterfaceOptionsFrame_OpenToCategory(Panel);
 end
 
-
 local function getQuestsInLog()
     quests = {}
-    for i=1, GetNumQuestLogEntries() do
+    for i = 1, GetNumQuestLogEntries() do
         local title, level, suggestedGroup, isHeader, isCollapsed, isComplete, frequency, questID, startEvent, displayQuestID, isOnMap, hasLocalPOI, isTask, isBounty, isStory, isHidden, isScaling = GetQuestLogTitle(i)
-        if (not level==0) then
+        if (not level == 0) then
             quests[i] = GetQuestLogTitle(i);
         end
     end
@@ -188,7 +199,7 @@ end
 local function isQuestFromLogInText(text)
     quests = getQuestsInLog();
     for _, quest in pairs(quests) do
-        if (string.find(text:lower(),quest:lower() )) then
+        if (string.find(text:lower(), quest:lower())) then
             return true
         end
     end
@@ -202,24 +213,23 @@ local function getLFMAddonChannelIndex()
     numberOfChannels = C_ChatInfo.GetNumActiveChannels()
     lfmAddonChannelIndex = 0
     for i = 1, numberOfChannels do
-        if (GetChannelDisplayInfo(i) == "lfm-addon-channel" ) then
+        if (GetChannelDisplayInfo(i) == "lfm-addon-channel") then
             lfmAddonChannelIndex = i
         end
     end
-    if (lfmAddonChannelIndex==0) then
+    if (lfmAddonChannelIndex == 0) then
         JoinTemporaryChannel("lfm-addon-channel", "", ChatFrame1:GetID(), 0);
-        RemoveChatWindowChannel(1,"lfm-addon-channel")
+        RemoveChatWindowChannel(1, "lfm-addon-channel")
     end
     return lfmAddonChannelIndex
 end
-
 
 local function hasXPRunTags(message)
     xpTags = {
         "xp",
         "exp"
     }
-    if (ns.Utility.containsTextFromArray(message,xpTags)) then
+    if (ns.Utility.containsTextFromArray(message, xpTags)) then
         return true
     end
     return false
@@ -231,12 +241,11 @@ local function hasCleaveTags(message)
         "spellcleave",
         "aoe"
     }
-    if (ns.Utility.containsTextFromArray(message,cleaveTags)) then
+    if (ns.Utility.containsTextFromArray(message, cleaveTags)) then
         return true
     end
     return false
 end
-
 
 local hasWarnedAboutChatName = false
 local DungeonList = {}
@@ -248,7 +257,7 @@ Frame:SetScript("OnEvent", function(_, event, ...)
     if (event == "CHAT_MSG_CHANNEL") then
         local message, player, _, _, _, _, _, _, channelName = ...
         local lfmSend = ParseMessageCFA(player, message, channelName)
-        if(lfmSend == false and Options.DEBUG_MODE) then
+        if (lfmSend == false and Options.DEBUG_MODE) then
             printMessageToNotLfmWindow(message)
         end
     end
@@ -259,40 +268,40 @@ local function GetPlayerLevel(sender)
     return level or 0
 end
 
-
 local hasSentVersionNumber = false
 
 function printMessageToLfmWindow(output)
     local lfgOutputFound = false
     for i = 1, NUM_CHAT_WINDOWS do
-        if (GetChatWindowInfo(i)=="p" or GetChatWindowInfo(i)=="P") then --if (GetChatWindowInfo(i)=="lfm" or GetChatWindowInfo(i)=="LFM") then
+        if (GetChatWindowInfo(i) == "p" or GetChatWindowInfo(i) == "P") then
+            --if (GetChatWindowInfo(i)=="lfm" or GetChatWindowInfo(i)=="LFM") then
             lfgOutputFound = true
             -- don't know how to specify correct chat frame without hard coding. please don't judge me
-            if (i==1) then
+            if (i == 1) then
                 ChatFrame1:AddMessage(output)
             end
-            if (i==2) then
+            if (i == 2) then
                 ChatFrame2:AddMessage(output)
             end
-            if (i==3) then
+            if (i == 3) then
                 ChatFrame3:AddMessage(output)
             end
-            if (i==4) then
+            if (i == 4) then
                 ChatFrame4:AddMessage(output)
             end
-            if (i==5) then
+            if (i == 5) then
                 ChatFrame5:AddMessage(output)
             end
-            if (i==6) then
+            if (i == 6) then
                 ChatFrame6:AddMessage(output)
             end
-            if (i==7) then
+            if (i == 7) then
                 ChatFrame7:AddMessage(output)
             end
-            if (i==8) then
+            if (i == 8) then
                 ChatFrame8:AddMessage(output)
             end
-            if (i==9) then
+            if (i == 9) then
                 ChatFrame9:AddMessage(output)
             end
         end
@@ -306,34 +315,34 @@ end
 function printMessageToNotLfmWindow(output)
     local lfgOutputFound = false
     for i = 1, NUM_CHAT_WINDOWS do
-        if (GetChatWindowInfo(i)=="notlfm" or GetChatWindowInfo(i)=="NOTLFM") then
+        if (GetChatWindowInfo(i) == "notlfm" or GetChatWindowInfo(i) == "NOTLFM") then
             lfgOutputFound = true
             -- don't know how to specify correct chat frame without hard coding. please don't judge me
-            if (i==1) then
+            if (i == 1) then
                 ChatFrame1:AddMessage(output)
             end
-            if (i==2) then
+            if (i == 2) then
                 ChatFrame2:AddMessage(output)
             end
-            if (i==3) then
+            if (i == 3) then
                 ChatFrame3:AddMessage(output)
             end
-            if (i==4) then
+            if (i == 4) then
                 ChatFrame4:AddMessage(output)
             end
-            if (i==5) then
+            if (i == 5) then
                 ChatFrame5:AddMessage(output)
             end
-            if (i==6) then
+            if (i == 6) then
                 ChatFrame6:AddMessage(output)
             end
-            if (i==7) then
+            if (i == 7) then
                 ChatFrame7:AddMessage(output)
             end
-            if (i==8) then
+            if (i == 8) then
                 ChatFrame8:AddMessage(output)
             end
-            if (i==9) then
+            if (i == 9) then
                 ChatFrame9:AddMessage(output)
             end
         end
@@ -353,30 +362,30 @@ local waitTable = {};
 local waitFrame = nil;
 
 function LFMCF__wait(delay, func, ...)
-if(type(delay)~="number" or type(func)~="function") then
-return false;
-end
-if(waitFrame == nil) then
-waitFrame = CreateFrame("Frame","WaitFrame", UIParent);
-waitFrame:SetScript("onUpdate",function (self,elapse)
-local count = #waitTable;
-local i = 1;
-while(i<=count) do
-local waitRecord = tremove(waitTable,i);
-local d = tremove(waitRecord,1);
-local f = tremove(waitRecord,1);
-local p = tremove(waitRecord,1);
-if(d>elapse) then
-tinsert(waitTable,i,{d-elapse,f,p});
-i = i + 1;
-else
-count = count - 1;
-f(unpack(p));
-end
-end
-end);
-end
-tinsert(waitTable,{delay,func,{...}});
+    if (type(delay) ~= "number" or type(func) ~= "function") then
+        return false;
+    end
+    if (waitFrame == nil) then
+        waitFrame = CreateFrame("Frame", "WaitFrame", UIParent);
+        waitFrame:SetScript("onUpdate", function(self, elapse)
+            local count = #waitTable;
+            local i = 1;
+            while (i <= count) do
+                local waitRecord = tremove(waitTable, i);
+                local d = tremove(waitRecord, 1);
+                local f = tremove(waitRecord, 1);
+                local p = tremove(waitRecord, 1);
+                if (d > elapse) then
+                    tinsert(waitTable, i, { d - elapse, f, p });
+                    i = i + 1;
+                else
+                    count = count - 1;
+                    f(unpack(p));
+                end
+            end
+        end);
+    end
+    tinsert(waitTable, { delay, func, { ... } });
     return true;
 end
 
@@ -391,24 +400,24 @@ local function removeBlizzIcons(text)
         "{Diamond}",
         "{Circle}",
         "{Star}"
-        }
+    }
     for _, var in pairs(icons) do
-        if (ns.Utility.containsText(text,var)) then
-            textWithoutIcons = textWithoutIcons:gsub(("%"..var)," ")
+        if (ns.Utility.containsText(text, var)) then
+            textWithoutIcons = textWithoutIcons:gsub(("%" .. var), " ")
         end
     end
     for _, var in pairs(icons) do
-        if (ns.Utility.containsText(text,var:upper())) then
-            textWithoutIcons = textWithoutIcons:gsub(("%"..var:upper())," ")
+        if (ns.Utility.containsText(text, var:upper())) then
+            textWithoutIcons = textWithoutIcons:gsub(("%" .. var:upper()), " ")
         end
     end
     for _, var in pairs(icons) do
-        if (ns.Utility.containsText(text,var:lower())) then
-            textWithoutIcons = textWithoutIcons:gsub(("%"..var:lower())," ")
+        if (ns.Utility.containsText(text, var:lower())) then
+            textWithoutIcons = textWithoutIcons:gsub(("%" .. var:lower()), " ")
         end
     end
     if (text ~= textWithoutIcons and Options.DEBUG_MODE) then
-        printMessageToLfmWindow("Fjernet blizz ikon! før var det: "..text)
+        printMessageToLfmWindow("Fjernet blizz ikon! før var det: " .. text)
     end
     return textWithoutIcons
 end
@@ -435,20 +444,20 @@ function ParseMessageCFA(sender, chatMessage, channel)
         end
     end
 
-	local lowerMessage = chatMessage:lower()
-	if (HasLFMTagCFA(lowerMessage) or (Options.include_LFG_messages_in_addition_to_LFM or (GetNumGroupMembers()>1 and GetNumGroupMembers()<5) and HasLFGTagCFA(lowerMessage))) then
-        if(Options.hide_XP_runs == true) then
+    local lowerMessage = chatMessage:lower()
+    if (HasLFMTagCFA(lowerMessage) or (Options.include_LFG_messages_in_addition_to_LFM or (GetNumGroupMembers() > 1 and GetNumGroupMembers() < 5) and HasLFGTagCFA(lowerMessage))) then
+        if (Options.hide_XP_runs == true) then
             if (hasXPRunTags(lowerMessage)) then
-                if(Options.DEBUG_MODE) then
-                    print('DEBUG: not showing message because it has XP run tags '..chatMessage)
+                if (Options.DEBUG_MODE) then
+                    print('DEBUG: not showing message because it has XP run tags ' .. chatMessage)
                 end
                 return false
             end
         end
         if (Options.hide_cleave_and_AOE_runs == true) then
             if (hasCleaveTags(lowerMessage)) then
-                if(Options.DEBUG_MODE) then
-                    print('DEBUG: not showing message because it has Cleave run tags '..chatMessage)
+                if (Options.DEBUG_MODE) then
+                    print('DEBUG: not showing message because it has Cleave run tags ' .. chatMessage)
                 end
                 return false
             end
@@ -465,27 +474,27 @@ function ParseMessageCFA(sender, chatMessage, channel)
         end
 
         local dungeonInMessage = HasDungeonAbbreviationCFA(lowerMessage)
-        if ( dungeonInMessage ~= false or (isQuestFromLogInText(lowerMessage))) then
+        if (dungeonInMessage ~= false or (isQuestFromLogInText(lowerMessage))) then
             hasWarnedAboutFullGroup = false
             pushToMessageList(chatMessage)
-            local link = "|cffffc0c0|Hplayer:"..sender.."|h["..sender.."]|h|r:";
-            local j,k = string.find(lowerMessage,dungeonInMessage:lower())
-            local newMessage = string.sub(chatMessage,0,(j-1)).."|cffffc0FF"..string.sub(chatMessage,j,k):upper().."|r"..string.sub(chatMessage,k+1,chatMessage:len())
+            local link = "|cffffc0c0|Hplayer:" .. sender .. "|h[" .. sender .. "]|h|r:";
+            local j, k = string.find(lowerMessage, dungeonInMessage:lower())
+            local newMessage = string.sub(chatMessage, 0, (j - 1)) .. "|cffffc0FF" .. string.sub(chatMessage, j, k):upper() .. "|r" .. string.sub(chatMessage, k + 1, chatMessage:len())
             --local output = "|cffffc0FF["..dungeonInMessage:upper().."]"
             local output = ""
             if (Options.show_time_stamp_on_messages) then
-                local hours,minutes = GetGameTime();
-                output = (output.."["..hours..":"..minutes.."] ")
+                local hours, minutes = GetGameTime();
+                output = (output .. "[" .. hours .. ":" .. minutes .. "] ")
             end
-            output = output..link.." "..newMessage
+            output = output .. link .. " " .. newMessage
             if (Options.display_channel_on_all_messages) then
-                output = output.." ["..channel.."]";
+                output = output .. " [" .. channel .. "]";
             end
             printMessageToLfmWindow(removeBlizzIcons(output))
             return true
         end
         return false
-	end
+    end
     return false
 end
 
@@ -534,12 +543,14 @@ function HasDungeonAbbreviationCFA(chatMessage)
     local level = UnitLevel("player")
     if (not Options.include_dungeons_outside_of_level_range) then
         for key, dungeon in pairs(GetDungeonsByLevelCFA(level)) do
-            if (ns.Utility.containsTextFromArray(Dungeons[key].Name,disabledDungeons)) then
+            if (ns.Utility.containsTextFromArray(Dungeons[key].Name, disabledDungeons)) then
                 return false
             end
             for _, abbreviation in pairs(dungeon.Abbreviations) do
                 words = {}
-                for word in lowerChatMessage:gmatch("%w+") do table.insert(words, word) end
+                for word in lowerChatMessage:gmatch("%w+") do
+                    table.insert(words, word)
+                end
                 if (ArrayContainsValueCFA(words, abbreviation:lower())) then
                     return abbreviation
                 end
@@ -549,7 +560,9 @@ function HasDungeonAbbreviationCFA(chatMessage)
         for key, dungeon in pairs(Dungeons) do
             for _, abbreviation in pairs(dungeon.Abbreviations) do
                 words = {}
-                for word in lowerChatMessage:gmatch("%w+") do table.insert(words, word) end
+                for word in lowerChatMessage:gmatch("%w+") do
+                    table.insert(words, word)
+                end
                 if (ArrayContainsValueCFA(words, abbreviation:lower())) then
                     return abbreviation
                 end
@@ -585,31 +598,31 @@ function GetDungeonsByLevelCFA(level)
     return dungeonsForLevel
 end
 
-DefineDungeonCFA("Ragefire Chasm", 5, 13, 18, "Orgrimmar", "rfc", {"rfc", "ragefire"})
-DefineDungeonCFA("Wailing Caverns", 5, 17, 24, "Barrens", "wc", {"wc","wailing"})
-DefineDungeonCFA("The Deadmines", 5, 17, 24, "Westfall", "vc", {"vc", "deadmines"})
-DefineDungeonCFA("Shadowfang Keep", 5, 21, 30, "Silverpine Forest", "sfk", {"sfk", "shadowfang"})
-DefineDungeonCFA("Blackfathom Deeps", 5, 22, 32, "Ashenvale", "bfd", {"bfd","blackfathom"})
-DefineDungeonCFA("The Stockades", 5, 22, 30, "Stormwind", "stockades", {"stockades", "stocks","stockade"})
-DefineDungeonCFA("Gnomeregan", 5, 28, 38, "Dun Morogh", "gnomergan", {"gnomeregan", "gnomer","gnome"})
-DefineDungeonCFA("Razorfen Kraul", 5, 25, 39, "Barrens", "rfk", {"rfk", "kraul"})
-DefineDungeonCFA("The Scarlet Monastery: Graveyard", 5, 28, 44, "Tirisfal Glades", "sm graveyard", {"grave","graveyard","sm","scarlet"})
-DefineDungeonCFA("The Scarlet Monastery: Library", 5, 30, 44, "Tirisfal Glades", "sm library", {"lib","library","sm","scarlet"})
-DefineDungeonCFA("The Scarlet Monastery: Armory", 5, 32, 44, "Tirisfal Glades", "sm armory", {"arms","arm","sm","scarlet"})
-DefineDungeonCFA("The Scarlet Monastery: Cathedral", 5, 34, 44, "Tirisfal Glades", "sm cathedral", {"cath","cathedral","scarlet","sm"})
-DefineDungeonCFA("Razorfen Downs", 5, 36, 46, "Barrens", "rfd", {"rfd","razorfen","downs"})
-DefineDungeonCFA("Uldaman", 5, 41, 52, "Badlands", "ulda", {"ulda","uldaman"})
-DefineDungeonCFA("Zul'Farak", 5, 42, 54, "Tanaris", "zf", {"zf","zul","farak","farrak"})
-DefineDungeonCFA("Maraudon", 5, 44, 54, "Desolace", "maraudon", {"maraudon", "mara"})
-DefineDungeonCFA("Temple of Atal'Hakkar", 5, 47, 60, "Swamp of Sorrows", "st", {"st", "toa", "atal", "sunken"})
-DefineDungeonCFA("Blackrock Depths", 5, 49, 60, "Blackrock Mountain", "brd", {"blackrock", "depths","brd","moira","lava","arena", "anger","golem","jailbreak","jailbreack","angerforge"})
-DefineDungeonCFA("Lower Blackrock Spire", 10, 55, 60, "Blackrock Mountain", "lbrs", {"lbrs","lower blackrock spire"})
-DefineDungeonCFA("Upper Blackrock Spire", 10, 55, 60, "Blackrock Mountain", "ubrs", {"ubrs","upper blackrock spire","rend"})
-DefineDungeonCFA("Dire Maul", 5, 56, 60, "Feralas", "Dire", {"dire","dm","tribute","maul","diremaul","dme","dmn","dmw"})
-DefineDungeonCFA("Stratholme", 5, 56, 60, "Eastern Plaguelands", "strat", {"strat","stratholme","start"," living"," ud ","undead","Startholme"})
-DefineDungeonCFA("Scholomance", 5, 56, 60, "Eastern Plaguelands", "scholo", {"scholo","scholomance"})
-DefineDungeonCFA("Molten Core", 40, 60, 60, "Blackrock Depths", "mc", {"mc","molten"})
-DefineDungeonCFA("Onyxia's Lair", 40, 60, 60, "Dustwallow Marsh", "ony", {"ony", "onyxia","onyxia's"})
+DefineDungeonCFA("Ragefire Chasm", 5, 13, 18, "Orgrimmar", "rfc", { "rfc", "ragefire" })
+DefineDungeonCFA("Wailing Caverns", 5, 17, 24, "Barrens", "wc", { "wc", "wailing" })
+DefineDungeonCFA("The Deadmines", 5, 17, 24, "Westfall", "vc", { "vc", "deadmines" })
+DefineDungeonCFA("Shadowfang Keep", 5, 21, 30, "Silverpine Forest", "sfk", { "sfk", "shadowfang" })
+DefineDungeonCFA("Blackfathom Deeps", 5, 22, 32, "Ashenvale", "bfd", { "bfd", "blackfathom" })
+DefineDungeonCFA("The Stockades", 5, 22, 30, "Stormwind", "stockades", { "stockades", "stocks", "stockade" })
+DefineDungeonCFA("Gnomeregan", 5, 28, 38, "Dun Morogh", "gnomergan", { "gnomeregan", "gnomer", "gnome" })
+DefineDungeonCFA("Razorfen Kraul", 5, 25, 39, "Barrens", "rfk", { "rfk", "kraul" })
+DefineDungeonCFA("The Scarlet Monastery: Graveyard", 5, 28, 44, "Tirisfal Glades", "sm graveyard", { "grave", "graveyard", "sm", "scarlet" })
+DefineDungeonCFA("The Scarlet Monastery: Library", 5, 30, 44, "Tirisfal Glades", "sm library", { "lib", "library", "sm", "scarlet" })
+DefineDungeonCFA("The Scarlet Monastery: Armory", 5, 32, 44, "Tirisfal Glades", "sm armory", { "arms", "arm", "sm", "scarlet" })
+DefineDungeonCFA("The Scarlet Monastery: Cathedral", 5, 34, 44, "Tirisfal Glades", "sm cathedral", { "cath", "cathedral", "scarlet", "sm" })
+DefineDungeonCFA("Razorfen Downs", 5, 36, 46, "Barrens", "rfd", { "rfd", "razorfen", "downs" })
+DefineDungeonCFA("Uldaman", 5, 41, 52, "Badlands", "ulda", { "ulda", "uldaman" })
+DefineDungeonCFA("Zul'Farak", 5, 42, 54, "Tanaris", "zf", { "zf", "zul", "farak", "farrak" })
+DefineDungeonCFA("Maraudon", 5, 44, 54, "Desolace", "maraudon", { "maraudon", "mara" })
+DefineDungeonCFA("Temple of Atal'Hakkar", 5, 47, 60, "Swamp of Sorrows", "st", { "st", "toa", "atal", "sunken" })
+DefineDungeonCFA("Blackrock Depths", 5, 49, 60, "Blackrock Mountain", "brd", { "blackrock", "depths", "brd", "moira", "lava", "arena", "anger", "golem", "jailbreak", "jailbreack", "angerforge" })
+DefineDungeonCFA("Lower Blackrock Spire", 10, 55, 60, "Blackrock Mountain", "lbrs", { "lbrs", "lower blackrock spire" })
+DefineDungeonCFA("Upper Blackrock Spire", 10, 55, 60, "Blackrock Mountain", "ubrs", { "ubrs", "upper blackrock spire", "rend" })
+DefineDungeonCFA("Dire Maul", 5, 56, 60, "Feralas", "Dire", { "dire", "dm", "tribute", "maul", "diremaul", "dme", "dmn", "dmw" })
+DefineDungeonCFA("Stratholme", 5, 56, 60, "Eastern Plaguelands", "strat", { "strat", "stratholme", "start", " living", " ud ", "undead", "Startholme" })
+DefineDungeonCFA("Scholomance", 5, 56, 60, "Eastern Plaguelands", "scholo", { "scholo", "scholomance" })
+DefineDungeonCFA("Molten Core", 40, 60, 60, "Blackrock Depths", "mc", { "mc", "molten" })
+DefineDungeonCFA("Onyxia's Lair", 40, 60, 60, "Dustwallow Marsh", "ony", { "ony", "onyxia", "onyxia's" })
 
 print("Possible dungeons for your level: ")
 for key, dungeon in pairs(GetDungeonsByLevelCFA(UnitLevel("player"))) do
