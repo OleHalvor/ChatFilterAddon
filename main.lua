@@ -21,21 +21,11 @@ local function pushToMessageList (message)
     return messageList
 end
 
-local function printMessageList()
-    local tableLengthInt = #messageList
-    print('printing message list: ')
-    for i = 1, tableLengthInt do
-        print('message '..i..': '..messageList[i])
-    end
-end
-
-
 local Name,AddOn=...;
 local Title=select(2,GetAddOnInfo(Name));
 local Version=GetAddOnMetadata(Name,"Version");
 local Options={};
 AddOn.Options=Options;
-local addon_users = {}
 
 local function SyncOptions(new,old,merge)
     --	This is practicly a table copy function to copy values from old to new
@@ -175,15 +165,6 @@ end
 --[[	Panel Registration	]]
 ----------------------------------
 InterfaceOptions_AddCategory(Panel);
--- a lot of this code is copied from classicLFG addon
-
-local successFullReg = C_ChatInfo.RegisterAddonMessagePrefix("LFMCF")
-local successFullRegVersion = C_ChatInfo.RegisterAddonMessagePrefix("LFMCFV")
-
--- /run C_ChatInfo.SendAddonMessage("prefix", "LFM DM","WHISPER","Dudetwo");
--- /script C_ChatInfo.SendAddonMessage("prefix", "LFM DM","WHISPER","Dudetwo-Gandling");
--- /script SendChatMessage("melding" ,"WHISPER" ,"COMMON" ,"Dudetwo-Gandling");
--- /script SendAddonMessage("LFMCF", "LFM DM", "WHISPER", "Dudetwo-Gandling");
 
 
 SLASH_ChatFilterAddon1 = "/lfm";
@@ -232,20 +213,6 @@ local function getLFMAddonChannelIndex()
     return lfmAddonChannelIndex
 end
 
-local function spamAllHiddenChannels(networkMessage)
-    JoinChannelByName("LfmAddonChannel", "", ChatFrame1:GetID(), 0);
-    RemoveChatWindowChannel(ChatFrame1:GetID(),"LfmAddonChannel")
-
-    for i = 1, GetNumDisplayChannels() do
-        id, name = GetChannelName(i);
-        if(name=="LfmAddonChannel") then
-            C_ChatInfo.SendAddonMessage("LFMCFV",versionNumber,"CHANNEL",i)
-            C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"CHANNEL",i)
-        end
-    end
-    --success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"GUILD")
-    --success = C_ChatInfo.SendAddonMessage("LFMCFV", versionNumber,"GUILD")
-end
 
 local function hasXPRunTags(message)
     xpTags = {
@@ -277,45 +244,12 @@ local Dungeons = {}
 local lastMessage = ""
 local Frame = CreateFrame("frame")
 Frame:RegisterEvent("CHAT_MSG_CHANNEL")
-Frame:RegisterEvent("CHAT_MSG_ADDON")
 Frame:SetScript("OnEvent", function(_, event, ...)
     if (event == "CHAT_MSG_CHANNEL") then
         local message, player, _, _, _, _, _, _, channelName = ...
-        local lfmSend = ParseMessageCFA(player, message, channelName,"false")
+        local lfmSend = ParseMessageCFA(player, message, channelName)
         if(lfmSend == false and Options.DEBUG_MODE) then
             printMessageToNotLfmWindow(message)
-        end
-    end
-
-    if (event == "CHAT_MSG_ADDON") then
-        local prefix, message, type, sender, _, _, _, _, _ = ...
-        if (prefix=="LFMCF") then
-            if ( not (UnitName("player")==sender or UnitName("player")..'-'..serverTag==sender) ) then
-                words = ns.Utility.mysplit(message,";")
-                if (Options.DEBUG_MODE==true) then
-                    channelPlusNetworkSender=words[3].." - "..words[2]
-                else
-                    channelPlusNetworkSender=words[3]
-                end
-
-                if (ns.Utility.tablelength(words) >= 4) then
-                    ParseMessageCFA(words[1], words[4], channelPlusNetworkSender,"true")
-                else
-                    print('received message from other client which did not parse: '..message)
-                end
-            end
-        end
-        if (prefix=="LFMCFV" and Options.DEBUG_MODE) then
-            if(addon_users[sender] ~= sender) then
-                printMessageToLfmWindow('|cFF00FF00'..sender..' is using addon version: '..message..'|r')
-                addon_users[sender] = sender
-            else
-                addon_users[sender] = sender
-            end
-
-            --printMessageToLfmWindow('|cFF00FF00'..sender..' is using addon version: '..message..'|r')
-
-
         end
     end
 end)
@@ -485,7 +419,7 @@ local function rpadLFM (s, l, c)
     return res, res ~= s
 end
 
-function ParseMessageCFA(sender, chatMessage, channel,network)
+function ParseMessageCFA(sender, chatMessage, channel)
 
     if (lastMessageListUpdateTime + messageListClearInterval < time()) then
         for i = 1, messageListSize do
@@ -520,17 +454,6 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
             end
         end
 
-        if (network == "false") then --send message to other clients
-            words = {}
-            for word in chatMessage:gmatch("%w+") do
-                table.insert(words, word)
-            end
-            networkMessage=sender..";"..UnitName("player")..";"..channel..";"..chatMessage
-            success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage)
-            --success = C_ChatInfo.SendAddonMessage("LFMCF", networkMessage,"GUILD")
-            spamAllHiddenChannels(networkMessage)
-        end
-
         if ((not Options.keep_looking_while_in_full_group) and (GetNumGroupMembers() == 5)) then
             if (not hasWarnedAboutFullGroup) then
                 printMessageToLfmWindow("You're inn a full group. LFM will be disabled")
@@ -555,7 +478,7 @@ function ParseMessageCFA(sender, chatMessage, channel,network)
                 output = (output.."["..hours..":"..minutes.."] ")
             end
             output = output..link.." "..newMessage
-            if (Options.display_channel_on_all_messages or (Options.display_channel_if_from_other_addon_user and network=="true") ) then
+            if (Options.display_channel_on_all_messages) then
                 output = output.." ["..channel.."]";
             end
             printMessageToLfmWindow(removeBlizzIcons(output))
@@ -662,8 +585,6 @@ function GetDungeonsByLevelCFA(level)
     return dungeonsForLevel
 end
 
-
--- Dungeon defining stole shamelessly from ClassicLFG addon
 DefineDungeonCFA("Ragefire Chasm", 5, 13, 18, "Orgrimmar", "rfc", {"rfc", "ragefire"})
 DefineDungeonCFA("Wailing Caverns", 5, 17, 24, "Barrens", "wc", {"wc","wailing"})
 DefineDungeonCFA("The Deadmines", 5, 17, 24, "Westfall", "vc", {"vc", "deadmines"})
@@ -684,9 +605,7 @@ DefineDungeonCFA("Temple of Atal'Hakkar", 5, 47, 60, "Swamp of Sorrows", "st", {
 DefineDungeonCFA("Blackrock Depths", 5, 49, 60, "Blackrock Mountain", "brd", {"blackrock", "depths","brd","moira","lava","arena", "anger","golem","jailbreak","jailbreack","angerforge"})
 DefineDungeonCFA("Lower Blackrock Spire", 10, 55, 60, "Blackrock Mountain", "lbrs", {"lbrs","lower blackrock spire"})
 DefineDungeonCFA("Upper Blackrock Spire", 10, 55, 60, "Blackrock Mountain", "ubrs", {"ubrs","upper blackrock spire","rend"})
--- ToDo: Need to add all the Dungeon parts once they are released on Classic Realms
 DefineDungeonCFA("Dire Maul", 5, 56, 60, "Feralas", "Dire", {"dire","dm","tribute","maul","diremaul","dme","dmn","dmw"})
---
 DefineDungeonCFA("Stratholme", 5, 56, 60, "Eastern Plaguelands", "strat", {"strat","stratholme","start"," living"," ud ","undead","Startholme"})
 DefineDungeonCFA("Scholomance", 5, 56, 60, "Eastern Plaguelands", "scholo", {"scholo","scholomance"})
 DefineDungeonCFA("Molten Core", 40, 60, 60, "Blackrock Depths", "mc", {"mc","molten"})
