@@ -3,13 +3,20 @@ print("ChatFilterAddon By Tryllemann Loaded")
 local addon, ns = ...
 
 local messageList = {}
-local messageListSize = 5
 local hasWarnedAboutFullGroup = false
 
-local messageQueueMaxSize = 10  -- Maximum number of messages in the queue
+local messageQueueMaxSize = 100  -- Maximum number of messages in the queue
 local messageTimeout = 60       -- Timeout in seconds for each message
 
+local function printMessageList()
+    print('printing message list: ')
+    for i, messageEntry in ipairs(messageList) do
+        print("Message " .. i .. ": " .. messageEntry.text .. ", Timestamp: " .. messageEntry.timestamp)
+    end
+end
+
 local function pushToMessageList(message)
+    printMessageList()
     local currentTime = time()
 
     -- Remove expired messages
@@ -332,11 +339,7 @@ function ParseMessageCFA(sender, chatMessage, channel)
     if dungeonInMessage ~= false or isQuestFromLogInText(lowerMessage) then
         hasWarnedAboutFullGroup = false
 
-        -- Add message to the queue
-        if #messageList >= messageQueueMaxSize then
-            table.remove(messageList, 1)
-        end
-        table.insert(messageList, { text = chatMessage, timestamp = currentTime })
+        pushToMessageList(chatMessage)
 
         -- Format and print message
         local formattedMessage = formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage, channel)
