@@ -6,8 +6,6 @@ local messageList = { "melding -2", "melding -1", "melding 0", "melding 1", "mel
 local messageListSize = #messageList
 local lastMessageListUpdateTime = time()
 local messageListClearInterval = 60
-local serverTag = ""
-local versionNumber = "0.9.3"
 local hasWarnedAboutFullGroup = false
 
 local function pushToMessageList (message)
@@ -15,38 +13,6 @@ local function pushToMessageList (message)
         table.remove(messageList, 1)
     end
     table.insert(messageList, message)
-end
-
-local Name, AddOn = ...;
-local Title = select(2, GetAddOnInfo(Name));
-local Version = GetAddOnMetadata(Name, "Version");
-local Options = {};
-AddOn.Options = Options;
-
-local function SyncOptions(new, old, merge)
-    --	This is practicly a table copy function to copy values from old to new
-    --	new will always be the table modified and is the same table returned
-    --	old shall always remain untouched
-    --	merge controls if shared keys are overwritten
-
-    --	Exception handling
-    if old == nil then
-        return new;
-    end--		If old is missing, return new
-    if type(old) ~= "table" then
-        return old;
-    end--	If old is non-table, return old
-    if type(new) ~= "table" then
-        new = {};
-    end--	If new is non-table, overwrite; proceed with copying of old
-
-    for i, j in pairs(old) do
-        local val = rawget(new, i);
-        if merge or val == nil then
-            rawset(new, i, SyncOptions(val, j, merge));
-        end
-    end
-    return new;
 end
 
 function try(f, catch_f)
@@ -64,126 +30,6 @@ local disabledDungeons = {
 }
 disabledDungeons = {}
 
-local Defaults = {
-    --include_dungeons_outside_of_level_range=true,
-    include_dungeons_outside_of_level_range = false,
-    show_time_stamp_on_messages = false,
-    display_channel_on_all_messages = false,
-    hide_XP_runs = false,
-    hide_cleave_and_AOE_runs = false,
-    keep_looking_while_in_full_group = false,
-    DEBUG_MODE = false,
-    display_channel_if_from_other_addon_user = true,
-    include_LFG_messages_in_addition_to_LFM = false
-};
-
-ChatFilterAddon_Options = SyncOptions(Options, Defaults);
-
---------------------------
---[[	Options Panel	]]
---------------------------
-local Changes = SyncOptions({}, Options);
-local Panel = CreateFrame("Frame");
-Panel.name = Title;
-
-do
-    --	Title
-    local txt;
-
-    local title = Panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge");
-    title:SetPoint("TOPLEFT", 12, -12);
-    title:SetText(Title);
-
-    local ver = Panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall");
-    ver:SetPoint("TOPLEFT", title, "TOPRIGHT", 4, 0);
-    ver:SetTextColor(0.5, 0.5, 0.5);
-    ver:SetText("v" .. Version);
-end
-
-Panel:RegisterEvent("ADDON_LOADED");
-Panel:SetScript("OnEvent", function(self, event, ...)
-    if event == "ADDON_LOADED" and (...) == Name then
-        ChatFilterAddon_Options = SyncOptions(Options, ChatFilterAddon_Options, true);
-        SyncOptions(Changes, Options, true);
-        serverTag = GetNormalizedRealmName();
-        if serverTag == nil then
-            serverTag = "Gandling"
-        end
-        self:UnregisterEvent(event);
-    end
-end);
-
-----------------------------------
---[[	Options Controls	]]
-----------------------------------
-local Buttons = {};
-local BuildButton;
-do
-    --	function BuildButton(tbl,var,txt,x,y)
-    local function OnClick(self)
-        self.Table[self.Var] = self:GetChecked();
-    end
-    local function Refresh(self)
-        self:SetChecked(self:IsEnabled() and self.Table[self.Var]);
-    end
-    function BuildButton(tbl, var, txt, x, y)
-        local btn = CreateFrame("CheckButton", nil, Panel, "UICheckButtonTemplate");
-        btn:SetPoint("TOPLEFT", x, y);
-        local tempVar = var:gsub("%_", " ")
-        btn:SetScript("OnClick", OnClick);
-        btn.Text:SetText(txt or tempVar:gsub("^(.)", string.upper));
-        btn.Table = tbl;
-        btn.Var = var;
-        btn.Refresh = Refresh;
-
-        Buttons[#Buttons + 1] = btn;
-        return btn;
-    end
-end
-
-do
-    --	LinkButtons
-    local list = {};
-    for i, j in pairs(Defaults) do
-        list[#list + 1] = i;
-    end
-    table.sort(list);
-    for i, j in ipairs(list) do
-        BuildButton(Changes, j, nil, 16, -i * 24 - 24);
-    end
-end
-
---------------------------
---[[	Panel Callbacks	]]
---------------------------
-Panel.okay = function()
-    SyncOptions(Options, Changes, true);
-    AddOn.RecompileLinks();
-end
-Panel.cancel = function()
-    SyncOptions(Changes, Options, true);
-end
-Panel.default = function()
-    --	Note, the defaults table may have dirty values since it lends its subtables to the options var if needed
-    SyncOptions(Options, Defaults, true);
-    SyncOptions(Changes, Defaults, true);
-end
-Panel.refresh = function()
-    for i, j in ipairs(Buttons) do
-        j:Refresh();
-    end
-end
-
-----------------------------------
---[[	Panel Registration	]]
-----------------------------------
-InterfaceOptions_AddCategory(Panel);
-
-SLASH_ChatFilterAddon1 = "/lfm";
-function SlashCmdList.ChatFilterAddon(msg)
-    InterfaceOptionsFrame_OpenToCategory(Panel);
-    InterfaceOptionsFrame_OpenToCategory(Panel);
-end
 
 local function getQuestsInLog()
     quests = {}
@@ -208,21 +54,6 @@ end
 
 print(getQuestsInLog())
 
-local function getLFMAddonChannelIndex()
-    -- this doesn't work, right?
-    numberOfChannels = C_ChatInfo.GetNumActiveChannels()
-    lfmAddonChannelIndex = 0
-    for i = 1, numberOfChannels do
-        if (GetChannelDisplayInfo(i) == "lfm-addon-channel") then
-            lfmAddonChannelIndex = i
-        end
-    end
-    if (lfmAddonChannelIndex == 0) then
-        JoinTemporaryChannel("lfm-addon-channel", "", ChatFrame1:GetID(), 0);
-        RemoveChatWindowChannel(1, "lfm-addon-channel")
-    end
-    return lfmAddonChannelIndex
-end
 
 local function hasXPRunTags(message)
     xpTags = {
@@ -250,25 +81,17 @@ end
 local hasWarnedAboutChatName = false
 local DungeonList = {}
 local Dungeons = {}
-local lastMessage = ""
 local Frame = CreateFrame("frame")
 Frame:RegisterEvent("CHAT_MSG_CHANNEL")
 Frame:SetScript("OnEvent", function(_, event, ...)
     if (event == "CHAT_MSG_CHANNEL") then
         local message, player, _, _, _, _, _, _, channelName = ...
         local lfmSend = ParseMessageCFA(player, message, channelName)
-        if (lfmSend == false and Options.DEBUG_MODE) then
+        if (lfmSend == false and ns.Options.DEBUG_MODE) then
             printMessageToNotLfmWindow(message)
         end
     end
 end)
-
-local function GetPlayerLevel(sender)
-    local _, _, _, _, level = GetPlayerInfoByGUID(sender)
-    return level or 0
-end
-
-local hasSentVersionNumber = false
 
 function printMessageToLfmWindow(output)
     local lfgOutputFound = false
@@ -276,7 +99,6 @@ function printMessageToLfmWindow(output)
         if (GetChatWindowInfo(i) == "p" or GetChatWindowInfo(i) == "P") then
             --if (GetChatWindowInfo(i)=="lfm" or GetChatWindowInfo(i)=="LFM") then
             lfgOutputFound = true
-            -- don't know how to specify correct chat frame without hard coding. please don't judge me
             if (i == 1) then
                 ChatFrame1:AddMessage(output)
             end
@@ -416,7 +238,7 @@ local function removeBlizzIcons(text)
             textWithoutIcons = textWithoutIcons:gsub(("%" .. var:lower()), " ")
         end
     end
-    if (text ~= textWithoutIcons and Options.DEBUG_MODE) then
+    if (text ~= textWithoutIcons and ns.Options.DEBUG_MODE) then
         printMessageToLfmWindow("Fjernet blizz ikon! før var det: " .. text)
     end
     return textWithoutIcons
@@ -445,25 +267,25 @@ function ParseMessageCFA(sender, chatMessage, channel)
     end
 
     local lowerMessage = chatMessage:lower()
-    if (HasLFMTagCFA(lowerMessage) or (Options.include_LFG_messages_in_addition_to_LFM or (GetNumGroupMembers() > 1 and GetNumGroupMembers() < 5) and HasLFGTagCFA(lowerMessage))) then
-        if (Options.hide_XP_runs == true) then
+    if (HasLFMTagCFA(lowerMessage) or (ns.Options.include_LFG_messages_in_addition_to_LFM or (GetNumGroupMembers() > 1 and GetNumGroupMembers() < 5) and HasLFGTagCFA(lowerMessage))) then
+        if (ns.Options.hide_XP_runs == true) then
             if (hasXPRunTags(lowerMessage)) then
-                if (Options.DEBUG_MODE) then
+                if (ns.Options.DEBUG_MODE) then
                     print('DEBUG: not showing message because it has XP run tags ' .. chatMessage)
                 end
                 return false
             end
         end
-        if (Options.hide_cleave_and_AOE_runs == true) then
+        if (ns.Options.hide_cleave_and_AOE_runs == true) then
             if (hasCleaveTags(lowerMessage)) then
-                if (Options.DEBUG_MODE) then
+                if (ns.Options.DEBUG_MODE) then
                     print('DEBUG: not showing message because it has Cleave run tags ' .. chatMessage)
                 end
                 return false
             end
         end
 
-        if ((not Options.keep_looking_while_in_full_group) and (GetNumGroupMembers() == 5)) then
+        if ((not ns.Options.keep_looking_while_in_full_group) and (GetNumGroupMembers() == 5)) then
             if (not hasWarnedAboutFullGroup) then
                 printMessageToLfmWindow("You're inn a full group. LFM will be disabled")
                 printMessageToLfmWindow("If you still wish to look for LFM request this can be toggled in the settings")
@@ -482,12 +304,12 @@ function ParseMessageCFA(sender, chatMessage, channel)
             local newMessage = string.sub(chatMessage, 0, (j - 1)) .. "|cffffc0FF" .. string.sub(chatMessage, j, k):upper() .. "|r" .. string.sub(chatMessage, k + 1, chatMessage:len())
             --local output = "|cffffc0FF["..dungeonInMessage:upper().."]"
             local output = ""
-            if (Options.show_time_stamp_on_messages) then
+            if (ns.Options.show_time_stamp_on_messages) then
                 local hours, minutes = GetGameTime();
                 output = (output .. "[" .. hours .. ":" .. minutes .. "] ")
             end
             output = output .. link .. " " .. newMessage
-            if (Options.display_channel_on_all_messages) then
+            if (ns.Options.display_channel_on_all_messages) then
                 output = output .. " [" .. channel .. "]";
             end
             printMessageToLfmWindow(removeBlizzIcons(output))
@@ -541,7 +363,7 @@ end
 function HasDungeonAbbreviationCFA(chatMessage)
     local lowerChatMessage = chatMessage:lower()
     local level = UnitLevel("player")
-    if (not Options.include_dungeons_outside_of_level_range) then
+    if (not ns.Options.include_dungeons_outside_of_level_range) then
         for key, dungeon in pairs(GetDungeonsByLevelCFA(level)) do
             if (ns.Utility.containsTextFromArray(Dungeons[key].Name, disabledDungeons)) then
                 return false

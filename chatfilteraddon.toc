@@ -6,3 +6,4 @@
 
 UtilityFunctions.lua
 main.lua
+ChatFilterAddon_Options.lua
