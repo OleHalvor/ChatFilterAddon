@@ -2,18 +2,31 @@ print("ChatFilterAddon By Tryllemann Loaded")
 
 local addon, ns = ...
 
-local messageList = { "melding -2", "melding -1", "melding 0", "melding 1", "melding 2", "melding 3" }
-local messageListSize = #messageList
-local lastMessageListUpdateTime = time()
-local messageListClearInterval = 60
+local messageList = {}
+local messageListSize = 5
 local hasWarnedAboutFullGroup = false
 
-local function pushToMessageList (message)
-    if #messageList >= messageListSize then
+local messageQueueMaxSize = 10  -- Maximum number of messages in the queue
+local messageTimeout = 60       -- Timeout in seconds for each message
+
+local function pushToMessageList(message)
+    local currentTime = time()
+
+    -- Remove expired messages
+    while #messageList > 0 and (currentTime - messageList[1].timestamp) > messageTimeout do
         table.remove(messageList, 1)
     end
-    table.insert(messageList, message)
+
+    -- Remove oldest message if queue is full
+    if #messageList >= messageQueueMaxSize then
+        table.remove(messageList, 1)
+    end
+
+    -- Add new message with timestamp
+    table.insert(messageList, { text = message, timestamp = currentTime })
 end
+
+
 
 function try(f, catch_f)
     local status, exception = pcall(f)
@@ -250,75 +263,90 @@ local function rpadLFM (s, l, c)
     return res, res ~= s
 end
 
+local function shouldShowMessageBasedOnTags(lowerMessage)
+    if ns.Options.hide_XP_runs and hasXPRunTags(lowerMessage) then
+        return false, 'XP run tags'
+    end
+    if ns.Options.hide_cleave_and_AOE_runs and hasCleaveTags(lowerMessage) then
+        return false, 'Cleave run tags'
+    end
+    return true
+end
+
+local function formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage, channel)
+    local link = "|cffffc0c0|Hplayer:" .. sender .. "|h[" .. sender .. "]|h|r:"
+    local j, k = string.find(lowerMessage, dungeonInMessage:lower())
+    local newMessage = string.sub(chatMessage, 0, j - 1) .. "|cffffc0FF" ..
+            string.sub(chatMessage, j, k):upper() .. "|r" ..
+            string.sub(chatMessage, k + 1)
+    local output = ""
+    if ns.Options.show_time_stamp_on_messages then
+        local hours, minutes = GetGameTime()
+        output = "[" .. hours .. ":" .. minutes .. "] "
+    end
+    output = output .. link .. " " .. newMessage
+    if ns.Options.display_channel_on_all_messages then
+        output = output .. " [" .. channel .. "]"
+    end
+    return output
+end
+
+
 function ParseMessageCFA(sender, chatMessage, channel)
-
-    if (lastMessageListUpdateTime + messageListClearInterval < time()) then
-        for i = 1, messageListSize do
-            messageList[i] = i
-        end
-        lastMessageListUpdateTime = time()
-    end
-
-    local messageListActualSize = #messageList
-    for i = 0, messageListActualSize do
-        if (messageList[i] == chatMessage) then
-            return nil
-        end
-    end
-
+    local currentTime = time()
     local lowerMessage = chatMessage:lower()
-    if (HasLFMTagCFA(lowerMessage) or (ns.Options.include_LFG_messages_in_addition_to_LFM or (GetNumGroupMembers() > 1 and GetNumGroupMembers() < 5) and HasLFGTagCFA(lowerMessage))) then
-        if (ns.Options.hide_XP_runs == true) then
-            if (hasXPRunTags(lowerMessage)) then
-                if (ns.Options.DEBUG_MODE) then
-                    print('DEBUG: not showing message because it has XP run tags ' .. chatMessage)
-                end
-                return false
-            end
-        end
-        if (ns.Options.hide_cleave_and_AOE_runs == true) then
-            if (hasCleaveTags(lowerMessage)) then
-                if (ns.Options.DEBUG_MODE) then
-                    print('DEBUG: not showing message because it has Cleave run tags ' .. chatMessage)
-                end
-                return false
-            end
-        end
 
-        if ((not ns.Options.keep_looking_while_in_full_group) and (GetNumGroupMembers() == 5)) then
-            if (not hasWarnedAboutFullGroup) then
-                printMessageToLfmWindow("You're inn a full group. LFM will be disabled")
-                printMessageToLfmWindow("If you still wish to look for LFM request this can be toggled in the settings")
-                printMessageToLfmWindow("Good luck and have fun in the dungeon :)")
-            end
-            hasWarnedAboutFullGroup = true
-            return false
+    local messageExists = false
+    for i, messageEntry in ipairs(messageList) do
+        if messageEntry.text == chatMessage then
+            messageExists = true
+            break
         end
+    end
 
-        local dungeonInMessage = HasDungeonAbbreviationCFA(lowerMessage)
-        if (dungeonInMessage ~= false or (isQuestFromLogInText(lowerMessage))) then
-            hasWarnedAboutFullGroup = false
-            pushToMessageList(chatMessage)
-            local link = "|cffffc0c0|Hplayer:" .. sender .. "|h[" .. sender .. "]|h|r:";
-            local j, k = string.find(lowerMessage, dungeonInMessage:lower())
-            local newMessage = string.sub(chatMessage, 0, (j - 1)) .. "|cffffc0FF" .. string.sub(chatMessage, j, k):upper() .. "|r" .. string.sub(chatMessage, k + 1, chatMessage:len())
-            --local output = "|cffffc0FF["..dungeonInMessage:upper().."]"
-            local output = ""
-            if (ns.Options.show_time_stamp_on_messages) then
-                local hours, minutes = GetGameTime();
-                output = (output .. "[" .. hours .. ":" .. minutes .. "] ")
-            end
-            output = output .. link .. " " .. newMessage
-            if (ns.Options.display_channel_on_all_messages) then
-                output = output .. " [" .. channel .. "]";
-            end
-            printMessageToLfmWindow(removeBlizzIcons(output))
-            return true
+    if messageExists then
+        return false
+    end
+
+    -- Check if message should be shown based on tags
+    local shouldShow, reason = shouldShowMessageBasedOnTags(lowerMessage)
+    if not shouldShow then
+        if ns.Options.DEBUG_MODE then
+            print('DEBUG: not showing message because it has ' .. reason)
         end
         return false
     end
+
+    -- Check if in a full group
+    if not ns.Options.keep_looking_while_in_full_group and GetNumGroupMembers() == 5 then
+        if not hasWarnedAboutFullGroup then
+            printMessageToLfmWindow("You're in a full group. LFM will be disabled")
+            printMessageToLfmWindow("If you still wish to look for LFM request this can be toggled in the settings")
+            hasWarnedAboutFullGroup = true
+        end
+        return false
+    end
+
+    -- Check for dungeon abbreviations or quests in message
+    local dungeonInMessage = HasDungeonAbbreviationCFA(lowerMessage)
+    if dungeonInMessage ~= false or isQuestFromLogInText(lowerMessage) then
+        hasWarnedAboutFullGroup = false
+
+        -- Add message to the queue
+        if #messageList >= messageQueueMaxSize then
+            table.remove(messageList, 1)
+        end
+        table.insert(messageList, { text = chatMessage, timestamp = currentTime })
+
+        -- Format and print message
+        local formattedMessage = formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage, channel)
+        printMessageToLfmWindow(removeBlizzIcons(formattedMessage))
+        return true
+    end
     return false
 end
+
+
 
 function HasLFMTagCFA(text)
     local lfmTags = {
