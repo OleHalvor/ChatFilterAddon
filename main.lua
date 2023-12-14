@@ -16,7 +16,6 @@ local function printMessageList()
 end
 
 local function pushToMessageList(message)
-    printMessageList()
     local currentTime = time()
 
     -- Remove expired messages
