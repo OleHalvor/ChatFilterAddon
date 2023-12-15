@@ -43,24 +43,36 @@ function ns.Utility.removeBlizzIcons(text)
         "{Star}"
         }
     for _, var in pairs(icons) do
-        if (containsText(text,var)) then
+        if (ns.Utility.containsText(text,var)) then
             textWithoutIcons = textWithoutIcons:gsub(("%"..var)," ")
         end
     end
     for _, var in pairs(icons) do
-        if (containsText(text,var:upper())) then
+        if (ns.Utility.containsText(text,var:upper())) then
             textWithoutIcons = textWithoutIcons:gsub(("%"..var:upper())," ")
         end
     end
     for _, var in pairs(icons) do
-        if (containsText(text,var:lower())) then
+        if (ns.Utility.containsText(text,var:lower())) then
             textWithoutIcons = textWithoutIcons:gsub(("%"..var:lower())," ")
         end
     end
-    if (text ~= textWithoutIcons and Options.DEBUG_MODE) then
-        printMessageToLfmWindow("Fjernet blizz ikon! før var det: "..text)
+    if (text ~= textWithoutIcons and ns.Options.DEBUG_MODE) then
+        printMessageToOutputChat("Fjernet blizz ikon! før var det: "..text)
     end
     return textWithoutIcons
+end
+
+function ns.Utility.ArrayContainsValueCFA(array, val)
+    for index, value in ipairs(array) do
+        if value == val then
+            return true
+        end
+        if value:gsub('[%p%c%s]', '') == val then
+            return true
+        end
+    end
+    return false
 end
 
 print("UtilityFunctions.lua loaded")

@@ -2,12 +2,17 @@ print("ChatFilterAddon By Tryllemann Loaded")
 
 local addon, ns = ...
 
-local messageList = {}
-local hasWarnedAboutFullGroup = false
+local recentlySeenMessagesQueue = {}
 
 local messageQueueMaxSize = 100  -- Maximum number of messages in the queue
-local messageTimeout = 60       -- Timeout in seconds for each message
+local messageTimeout = 120      -- Timeout in seconds for each message
 local outputWindowName = "p"
+local debugWindowName = "debug"
+
+disabledDungeons = {} -- Manual declaration if needed
+local DungeonList = {} -- will be filled
+local Dungeons = {} -- will be filled
+local hasWarnedAboutFullGroup = false
 
 local function findChatFrameByName(name)
     for i = 1, NUM_CHAT_WINDOWS do
@@ -19,77 +24,36 @@ local function findChatFrameByName(name)
     return nil
 end
 
-local function createChatFrame(name)
-    print("creating chat " .. name)
-    -- Find an unused chat window
-    for i = 1, NUM_CHAT_WINDOWS do
-        local chatFrame = _G["ChatFrame" .. i]
-        if not chatFrame.isDocked then
-            -- Rename and configure the chat frame
-            FCF_SetWindowName(chatFrame, name)
-            ChatFrame_RemoveAllMessageGroups(chatFrame)
-            ChatFrame_RemoveAllChannels(chatFrame)
-            return chatFrame
-        end
-    end
-    -- If no unused window, create a new one
-    FCF_OpenNewWindow(name)
-    local chatFrame = _G["ChatFrame" .. NUM_CHAT_WINDOWS]
-    ChatFrame_RemoveAllMessageGroups(chatFrame)
-    ChatFrame_RemoveAllChannels(chatFrame)
-    return chatFrame
-end
 
--- At the start of your addon
-if not findChatFrameByName(outputWindowName) then
-    createChatFrame(outputWindowName)
-end
-
-if ns.Options.DEBUG_MODE and not findChatFrameByName("notlfm") then
-    createChatFrame("notlfm")
-end
 
 
 local function printMessageList()
     print('printing message list: ')
-    for i, messageEntry in ipairs(messageList) do
+    for i, messageEntry in ipairs(recentlySeenMessagesQueue) do
         print("Message " .. i .. ": " .. messageEntry.text .. ", Timestamp: " .. messageEntry.timestamp)
     end
 end
 
 local function pushToMessageList(message)
-    local currentTime = time()
-
-    -- Remove expired messages
-    while #messageList > 0 and (currentTime - messageList[1].timestamp) > messageTimeout do
-        table.remove(messageList, 1)
-    end
-
     -- Remove oldest message if queue is full
-    if #messageList >= messageQueueMaxSize then
-        table.remove(messageList, 1)
+    if #recentlySeenMessagesQueue >= messageQueueMaxSize then
+        table.remove(recentlySeenMessagesQueue, 1)
+        print("removing messages from FULL QUEUE, size: " .. #recentlySeenMessagesQueue)
     end
 
     -- Add new message with timestamp
-    table.insert(messageList, { text = message, timestamp = currentTime })
+    table.insert(recentlySeenMessagesQueue, { text = message, timestamp = time() })
 end
 
-
-
-function try(f, catch_f)
-    local status, exception = pcall(f)
-    if not status then
-        catch_f(exception)
+local function removeExpiredMessages()
+    -- Remove expired messages
+    while #recentlySeenMessagesQueue > 0 and (time() - recentlySeenMessagesQueue[1].timestamp) > messageTimeout do
+        table.remove(recentlySeenMessagesQueue, 1)
+        print("removing messages from TIMEOUT, size: " .. #recentlySeenMessagesQueue)
     end
 end
 
-local disabledDungeons = {
-    "The Scarlet Monastery: Library",
-    "The Scarlet Monastery: Cathedral",
-    "The Scarlet Monastery: Armory",
-    "The Scarlet Monastery: Graveyard"
-}
-disabledDungeons = {}
+
 
 local function hasXPRunTags(message)
     xpTags = {
@@ -114,9 +78,6 @@ local function hasCleaveTags(message)
     return false
 end
 
-local hasWarnedAboutChatName = false
-local DungeonList = {}
-local Dungeons = {}
 local Frame = CreateFrame("frame")
 Frame:RegisterEvent("CHAT_MSG_CHANNEL")
 Frame:SetScript("OnEvent", function(_, event, ...)
@@ -124,115 +85,36 @@ Frame:SetScript("OnEvent", function(_, event, ...)
         local message, player, _, _, _, _, _, _, channelName = ...
         local lfmSend = ParseMessageCFA(player, message, channelName)
         if (lfmSend == false and ns.Options.DEBUG_MODE) then
-            printMessageToNotLfmWindow(message)
+            printMessageToDebugChat(message)
         end
     end
 end)
 
 
-function printMessageToLfmWindow(output)
-    local windowNameToFind = outputWindowName
-    local chatFrame = findChatFrameByName(windowNameToFind)
+function printMessageToOutputChat(output)
+    local chatFrame = findChatFrameByName(outputWindowName)
 
     -- Create the chat frame if it doesn't exist
     if not chatFrame then
-        chatFrame = createChatFrame(windowNameToFind)
+        chatFrame = createChatFrame(outputWindowName)
     end
 
     -- Add message to the chat frame
     chatFrame:AddMessage(output)
 end
 
-function printMessageToNotLfmWindow(output)
-    local windowNameToFind = "notlfm"
-    local chatFrame = findChatFrameByName(windowNameToFind)
+function printMessageToDebugChat(output)
+    local chatFrame = findChatFrameByName(debugWindowName)
 
     -- Create the chat frame if it doesn't exist and in debug mode
     if not chatFrame and ns.Options.DEBUG_MODE then
-        chatFrame = createChatFrame(windowNameToFind)
+        chatFrame = createChatFrame(debugWindowName)
     end
 
     -- Add message to the chat frame if it exists
     if chatFrame then
         chatFrame:AddMessage(output)
     end
-end
-
-
-
-local function isInDungeon()
-    -- loop over dungeons, if current zone is a dungeon, return dungeon. else return false
-    return
-end
-
-local waitTable = {};
-local waitFrame = nil;
-
-function LFMCF__wait(delay, func, ...)
-    if (type(delay) ~= "number" or type(func) ~= "function") then
-        return false;
-    end
-    if (waitFrame == nil) then
-        waitFrame = CreateFrame("Frame", "WaitFrame", UIParent);
-        waitFrame:SetScript("onUpdate", function(self, elapse)
-            local count = #waitTable;
-            local i = 1;
-            while (i <= count) do
-                local waitRecord = tremove(waitTable, i);
-                local d = tremove(waitRecord, 1);
-                local f = tremove(waitRecord, 1);
-                local p = tremove(waitRecord, 1);
-                if (d > elapse) then
-                    tinsert(waitTable, i, { d - elapse, f, p });
-                    i = i + 1;
-                else
-                    count = count - 1;
-                    f(unpack(p));
-                end
-            end
-        end);
-    end
-    tinsert(waitTable, { delay, func, { ... } });
-    return true;
-end
-
-local function removeBlizzIcons(text)
-    local textWithoutIcons = text
-    icons = {
-        "{Skull}",
-        "{Cross}",
-        "{Square}",
-        "{Moon}",
-        "{Triangle}",
-        "{Diamond}",
-        "{Circle}",
-        "{Star}"
-    }
-    for _, var in pairs(icons) do
-        if (ns.Utility.containsText(text, var)) then
-            textWithoutIcons = textWithoutIcons:gsub(("%" .. var), " ")
-        end
-    end
-    for _, var in pairs(icons) do
-        if (ns.Utility.containsText(text, var:upper())) then
-            textWithoutIcons = textWithoutIcons:gsub(("%" .. var:upper()), " ")
-        end
-    end
-    for _, var in pairs(icons) do
-        if (ns.Utility.containsText(text, var:lower())) then
-            textWithoutIcons = textWithoutIcons:gsub(("%" .. var:lower()), " ")
-        end
-    end
-    if (text ~= textWithoutIcons and ns.Options.DEBUG_MODE) then
-        printMessageToLfmWindow("Fjernet blizz ikon! før var det: " .. text)
-    end
-    return textWithoutIcons
-end
-
-local srep = string.rep
-local function rpadLFM (s, l, c)
-    local res = s .. srep(c or ' ', l - #s)
-    return res, res ~= s
 end
 
 local function formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage, channel)
@@ -251,7 +133,9 @@ local function formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage
 end
 
 function messageHasBeenSeenRecently(message)
-    for i, messageEntry in ipairs(messageList) do
+    removeExpiredMessages()
+
+    for i, messageEntry in ipairs(recentlySeenMessagesQueue) do
         if messageEntry.text == message then
             return true
         end
@@ -265,6 +149,7 @@ function ParseMessageCFA(sender, chatMessage, channel)
 
     -- Abort if message seen recently
     if messageHasBeenSeenRecently(chatMessage) then
+        print("Message seen recently " .. chatMessage)
         return false
     end
 
@@ -282,8 +167,8 @@ function ParseMessageCFA(sender, chatMessage, channel)
     -- Abort if in full group
     if not ns.Options.keep_looking_while_in_full_group and GetNumGroupMembers() == 5 then
         if not hasWarnedAboutFullGroup then
-            printMessageToLfmWindow("You're in a full group. LFM will be disabled")
-            printMessageToLfmWindow("If you still wish to look for LFM request this can be toggled in the settings")
+            printMessageToOutputChat("You're in a full group. LFM will be disabled")
+            printMessageToOutputChat("If you still wish to look for LFM request this can be toggled in the settings")
             hasWarnedAboutFullGroup = true
         end
         return false
@@ -303,7 +188,7 @@ function ParseMessageCFA(sender, chatMessage, channel)
 
     hasWarnedAboutFullGroup = false
     pushToMessageList(chatMessage)
-    printMessageToLfmWindow(removeBlizzIcons(formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage, channel)))
+    printMessageToOutputChat(ns.Utility.removeBlizzIcons(formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage, channel)))
 end
 
 
@@ -336,17 +221,7 @@ function HasLFGTagCFA(text)
     return false
 end
 
-function ArrayContainsValueCFA(array, val)
-    for index, value in ipairs(array) do
-        if value == val then
-            return true
-        end
-        if value:gsub('[%p%c%s]', '') == val then
-            return true
-        end
-    end
-    return false
-end
+
 
 function HasDungeonAbbreviationCFA(chatMessage)
     local lowerChatMessage = chatMessage:lower()
@@ -361,7 +236,7 @@ function HasDungeonAbbreviationCFA(chatMessage)
                 for word in lowerChatMessage:gmatch("%w+") do
                     table.insert(words, word)
                 end
-                if (ArrayContainsValueCFA(words, abbreviation:lower())) then
+                if (ns.Utility.ArrayContainsValueCFA(words, abbreviation:lower())) then
                     return abbreviation
                 end
             end
@@ -373,7 +248,7 @@ function HasDungeonAbbreviationCFA(chatMessage)
                 for word in lowerChatMessage:gmatch("%w+") do
                     table.insert(words, word)
                 end
-                if (ArrayContainsValueCFA(words, abbreviation:lower())) then
+                if (ns.Utility.ArrayContainsValueCFA(words, abbreviation:lower())) then
                     return abbreviation
                 end
             end
