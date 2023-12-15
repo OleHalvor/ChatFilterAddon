@@ -29,7 +29,6 @@ end
 local Defaults = {
     include_dungeons_outside_of_level_range = false,
     show_time_stamp_on_messages = false,
-    display_channel_on_all_messages = false,
     hide_XP_runs = false,
     hide_cleave_and_AOE_runs = false,
     keep_looking_while_in_full_group = false,

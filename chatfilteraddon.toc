@@ -5,5 +5,5 @@
 ##SavedVariablesPerCharacter: ChatFilterAddon_Options
 
 UtilityFunctions.lua
-main.lua
 ChatFilterAddon_Options.lua
+main.lua

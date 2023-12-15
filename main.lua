@@ -7,6 +7,48 @@ local hasWarnedAboutFullGroup = false
 
 local messageQueueMaxSize = 100  -- Maximum number of messages in the queue
 local messageTimeout = 60       -- Timeout in seconds for each message
+local outputWindowName = "p"
+
+local function findChatFrameByName(name)
+    for i = 1, NUM_CHAT_WINDOWS do
+        local windowName = GetChatWindowInfo(i)
+        if windowName:lower() == name:lower() then
+            return _G["ChatFrame" .. i]
+        end
+    end
+    return nil
+end
+
+local function createChatFrame(name)
+    print("creating chat " .. name)
+    -- Find an unused chat window
+    for i = 1, NUM_CHAT_WINDOWS do
+        local chatFrame = _G["ChatFrame" .. i]
+        if not chatFrame.isDocked then
+            -- Rename and configure the chat frame
+            FCF_SetWindowName(chatFrame, name)
+            ChatFrame_RemoveAllMessageGroups(chatFrame)
+            ChatFrame_RemoveAllChannels(chatFrame)
+            return chatFrame
+        end
+    end
+    -- If no unused window, create a new one
+    FCF_OpenNewWindow(name)
+    local chatFrame = _G["ChatFrame" .. NUM_CHAT_WINDOWS]
+    ChatFrame_RemoveAllMessageGroups(chatFrame)
+    ChatFrame_RemoveAllChannels(chatFrame)
+    return chatFrame
+end
+
+-- At the start of your addon
+if not findChatFrameByName(outputWindowName) then
+    createChatFrame(outputWindowName)
+end
+
+if ns.Options.DEBUG_MODE and not findChatFrameByName("notlfm") then
+    createChatFrame("notlfm")
+end
+
 
 local function printMessageList()
     print('printing message list: ')
@@ -49,31 +91,6 @@ local disabledDungeons = {
 }
 disabledDungeons = {}
 
-
-local function getQuestsInLog()
-    quests = {}
-    for i = 1, GetNumQuestLogEntries() do
-        local title, level, suggestedGroup, isHeader, isCollapsed, isComplete, frequency, questID, startEvent, displayQuestID, isOnMap, hasLocalPOI, isTask, isBounty, isStory, isHidden, isScaling = GetQuestLogTitle(i)
-        if (not level == 0) then
-            quests[i] = GetQuestLogTitle(i);
-        end
-    end
-    return quests
-end
-
-local function isQuestFromLogInText(text)
-    quests = getQuestsInLog();
-    for _, quest in pairs(quests) do
-        if (string.find(text:lower(), quest:lower())) then
-            return true
-        end
-    end
-    return false
-end
-
-print(getQuestsInLog())
-
-
 local function hasXPRunTags(message)
     xpTags = {
         "xp",
@@ -112,48 +129,36 @@ Frame:SetScript("OnEvent", function(_, event, ...)
     end
 end)
 
+
 function printMessageToLfmWindow(output)
-    local lfgOutputFound = false
-    local windowNameToFind = "p"
+    local windowNameToFind = outputWindowName
+    local chatFrame = findChatFrameByName(windowNameToFind)
 
-    -- Loop through chat windows to find the one named "LFM" or "P"
-    for i = 1, NUM_CHAT_WINDOWS do
-        local windowName = GetChatWindowInfo(i)
-        if windowName:lower() == windowNameToFind:lower() then
-            lfgOutputFound = true
-            local chatFrame = _G["ChatFrame" .. i]
-            chatFrame:AddMessage(output)
-            break -- Stop the loop as we found the window
-        end
+    -- Create the chat frame if it doesn't exist
+    if not chatFrame then
+        chatFrame = createChatFrame(windowNameToFind)
     end
 
-    if not lfgOutputFound and not hasWarnedAboutChatName then
-        print('Did not find any chat windows named "' .. windowNameToFind .. '", please create one')
-        hasWarnedAboutChatName = true
-    end
+    -- Add message to the chat frame
+    chatFrame:AddMessage(output)
 end
 
-
-function printMessageToLfmWindow(output)
-    local lfgOutputFound = false
+function printMessageToNotLfmWindow(output)
     local windowNameToFind = "notlfm"
+    local chatFrame = findChatFrameByName(windowNameToFind)
 
-    -- Loop through chat windows to find the one named "LFM" or "P"
-    for i = 1, NUM_CHAT_WINDOWS do
-        local windowName = GetChatWindowInfo(i)
-        if windowName:lower() == windowNameToFind:lower() then
-            lfgOutputFound = true
-            local chatFrame = _G["ChatFrame" .. i]
-            chatFrame:AddMessage(output)
-            break -- Stop the loop as we found the window
-        end
+    -- Create the chat frame if it doesn't exist and in debug mode
+    if not chatFrame and ns.Options.DEBUG_MODE then
+        chatFrame = createChatFrame(windowNameToFind)
     end
 
-    if not lfgOutputFound and not hasWarnedAboutChatName then
-        print('Did not find any chat windows named "' .. windowNameToFind .. '", please create one')
-        hasWarnedAboutChatName = true
+    -- Add message to the chat frame if it exists
+    if chatFrame then
+        chatFrame:AddMessage(output)
     end
 end
+
+
 
 local function isInDungeon()
     -- loop over dungeons, if current zone is a dungeon, return dungeon. else return false
@@ -230,16 +235,6 @@ local function rpadLFM (s, l, c)
     return res, res ~= s
 end
 
-local function shouldShowMessageBasedOnTags(lowerMessage)
-    if ns.Options.hide_XP_runs and hasXPRunTags(lowerMessage) then
-        return false, 'XP run tags'
-    end
-    if ns.Options.hide_cleave_and_AOE_runs and hasCleaveTags(lowerMessage) then
-        return false, 'Cleave run tags'
-    end
-    return true
-end
-
 local function formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage, channel)
     local link = "|cffffc0c0|Hplayer:" .. sender .. "|h[" .. sender .. "]|h|r:"
     local j, k = string.find(lowerMessage, dungeonInMessage:lower())
@@ -252,38 +247,39 @@ local function formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage
         output = "[" .. hours .. ":" .. minutes .. "] "
     end
     output = output .. link .. " " .. newMessage
-    if ns.Options.display_channel_on_all_messages then
-        output = output .. " [" .. channel .. "]"
-    end
     return output
 end
 
+function messageHasBeenSeenRecently(message)
+    for i, messageEntry in ipairs(messageList) do
+        if messageEntry.text == message then
+            return true
+        end
+    end
+    return false
+end
 
+-- Parses chat messages and prints it if it meets criteria
 function ParseMessageCFA(sender, chatMessage, channel)
     local lowerMessage = chatMessage:lower()
 
-    local messageExists = false
-    for i, messageEntry in ipairs(messageList) do
-        if messageEntry.text == chatMessage then
-            messageExists = true
-            break
-        end
-    end
-
-    if messageExists then
+    -- Abort if message seen recently
+    if messageHasBeenSeenRecently(chatMessage) then
         return false
     end
 
-    -- Check if message should be shown based on tags
-    local shouldShow, reason = shouldShowMessageBasedOnTags(lowerMessage)
-    if not shouldShow then
-        if ns.Options.DEBUG_MODE then
-            print('DEBUG: not showing message because it has ' .. reason)
-        end
+    -- Abort if XP run and XP runs are disabled
+    if ns.Options.hide_XP_runs and hasXPRunTags(lowerMessage) then
         return false
     end
 
-    -- Check if in a full group
+
+    -- Abort if Cleave run and Cleave runs are disabled
+    if ns.Options.hide_cleave_and_AOE_runs and hasCleaveTags(lowerMessage) then
+        return false
+    end
+
+    -- Abort if in full group
     if not ns.Options.keep_looking_while_in_full_group and GetNumGroupMembers() == 5 then
         if not hasWarnedAboutFullGroup then
             printMessageToLfmWindow("You're in a full group. LFM will be disabled")
@@ -293,19 +289,21 @@ function ParseMessageCFA(sender, chatMessage, channel)
         return false
     end
 
-    -- Check for dungeon abbreviations or quests in message
+
+    -- Abort if message does not contain a relevant dungeon
     local dungeonInMessage = HasDungeonAbbreviationCFA(lowerMessage)
-    if dungeonInMessage ~= false or isQuestFromLogInText(lowerMessage) then
-        hasWarnedAboutFullGroup = false
-
-        pushToMessageList(chatMessage)
-
-        -- Format and print message
-        local formattedMessage = formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage, channel)
-        printMessageToLfmWindow(removeBlizzIcons(formattedMessage))
-        return true
+    if dungeonInMessage == false then
+        return false
     end
-    return false
+
+    -- Abort if message is LFG and LFG is disabled -
+    if (HasLFGTagCFA(lowerMessage) and not ns.Options.include_LFG_messages_in_addition_to_LFM) then
+        return false
+    end
+
+    hasWarnedAboutFullGroup = false
+    pushToMessageList(chatMessage)
+    printMessageToLfmWindow(removeBlizzIcons(formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage, channel)))
 end
 
 
@@ -412,9 +410,10 @@ end
 
 DefineDungeonCFA("Ragefire Chasm", 5, 13, 18, "Orgrimmar", "rfc", { "rfc", "ragefire" })
 DefineDungeonCFA("Wailing Caverns", 5, 17, 24, "Barrens", "wc", { "wc", "wailing" })
-DefineDungeonCFA("The Deadmines", 5, 17, 24, "Westfall", "vc", { "vc", "deadmines" })
+DefineDungeonCFA("The Deadmines", 5, 17, 24, "Westfall", "vc", { "vc", "deadmines", "dm" })
 DefineDungeonCFA("Shadowfang Keep", 5, 21, 30, "Silverpine Forest", "sfk", { "sfk", "shadowfang" })
-DefineDungeonCFA("Blackfathom Deeps", 5, 22, 32, "Ashenvale", "bfd", { "bfd", "blackfathom" })
+--DefineDungeonCFA("Blackfathom Deeps", 5, 22, 32, "Ashenvale", "bfd", { "bfd", "blackfathom" }) -- ORIGINAL
+DefineDungeonCFA("Blackfathom Deeps", 5, 22, 32, "Ashenvale", "bfd", { "bfd", "blackfathom" }) -- Season of Discovery
 DefineDungeonCFA("The Stockades", 5, 22, 30, "Stormwind", "stockades", { "stockades", "stocks", "stockade" })
 DefineDungeonCFA("Gnomeregan", 5, 28, 38, "Dun Morogh", "gnomergan", { "gnomeregan", "gnomer", "gnome" })
 DefineDungeonCFA("Razorfen Kraul", 5, 25, 39, "Barrens", "rfk", { "rfk", "kraul" })
@@ -430,7 +429,7 @@ DefineDungeonCFA("Temple of Atal'Hakkar", 5, 47, 60, "Swamp of Sorrows", "st", {
 DefineDungeonCFA("Blackrock Depths", 5, 49, 60, "Blackrock Mountain", "brd", { "blackrock", "depths", "brd", "moira", "lava", "arena", "anger", "golem", "jailbreak", "jailbreack", "angerforge" })
 DefineDungeonCFA("Lower Blackrock Spire", 10, 55, 60, "Blackrock Mountain", "lbrs", { "lbrs", "lower blackrock spire" })
 DefineDungeonCFA("Upper Blackrock Spire", 10, 55, 60, "Blackrock Mountain", "ubrs", { "ubrs", "upper blackrock spire", "rend" })
-DefineDungeonCFA("Dire Maul", 5, 56, 60, "Feralas", "Dire", { "dire", "dm", "tribute", "maul", "diremaul", "dme", "dmn", "dmw" })
+DefineDungeonCFA("Dire Maul", 5, 56, 60, "Feralas", "Dire", { "dire", "tribute", "maul", "diremaul", "dme", "dmn", "dmw" })
 DefineDungeonCFA("Stratholme", 5, 56, 60, "Eastern Plaguelands", "strat", { "strat", "stratholme", "start", " living", " ud ", "undead", "Startholme" })
 DefineDungeonCFA("Scholomance", 5, 56, 60, "Eastern Plaguelands", "scholo", { "scholo", "scholomance" })
 DefineDungeonCFA("Molten Core", 40, 60, 60, "Blackrock Depths", "mc", { "mc", "molten" })
