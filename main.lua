@@ -1,11 +1,13 @@
 print("ChatFilterAddon By Tryllemann Loaded")
 
+-- TODO: Options for specific dungeons. Options for extra text-matches. Options for duplicate message suppresion timeout. Match seenMessage on player name as well.
+
 local addon, ns = ...
 
 local recentlySeenMessagesQueue = {}
 
-local messageQueueMaxSize = 100  -- Maximum number of messages in the queue
-local messageTimeout = 120      -- Timeout in seconds for each message
+local messageQueueMaxSize = 1000  -- Maximum number of messages in the queue
+local messageTimeout = 240      -- Timeout in seconds for each message
 local outputWindowName = "p"
 local debugWindowName = "debug"
 
@@ -38,7 +40,6 @@ local function pushToMessageList(message)
     -- Remove oldest message if queue is full
     if #recentlySeenMessagesQueue >= messageQueueMaxSize then
         table.remove(recentlySeenMessagesQueue, 1)
-        print("removing messages from FULL QUEUE, size: " .. #recentlySeenMessagesQueue)
     end
 
     -- Add new message with timestamp
@@ -46,10 +47,8 @@ local function pushToMessageList(message)
 end
 
 local function removeExpiredMessages()
-    -- Remove expired messages
     while #recentlySeenMessagesQueue > 0 and (time() - recentlySeenMessagesQueue[1].timestamp) > messageTimeout do
         table.remove(recentlySeenMessagesQueue, 1)
-        print("removing messages from TIMEOUT, size: " .. #recentlySeenMessagesQueue)
     end
 end
 
@@ -149,7 +148,6 @@ function ParseMessageCFA(sender, chatMessage, channel)
 
     -- Abort if message seen recently
     if messageHasBeenSeenRecently(chatMessage) then
-        print("Message seen recently " .. chatMessage)
         return false
     end
 
