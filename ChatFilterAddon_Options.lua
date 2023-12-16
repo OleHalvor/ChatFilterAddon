@@ -33,7 +33,7 @@ local Defaults = {
     hide_cleave_and_AOE_runs = false,
     keep_looking_while_in_full_group = false,
     DEBUG_MODE = false,
-    display_channel_if_from_other_addon_user = true,
+    display_channel_on_all_messages = false,
     include_LFG_messages_in_addition_to_LFM = false
 };
 

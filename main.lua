@@ -82,9 +82,9 @@ Frame:RegisterEvent("CHAT_MSG_CHANNEL")
 Frame:SetScript("OnEvent", function(_, event, ...)
     if (event == "CHAT_MSG_CHANNEL") then
         local message, player, _, _, _, _, _, _, channelName = ...
-        local lfmSend = ParseMessageCFA(player, message, channelName)
+        local lfmSend, reason = ParseMessageCFA(player, message, channelName)
         if (lfmSend == false and ns.Options.DEBUG_MODE) then
-            printMessageToDebugChat(message)
+            printMessageToDebugChat(reason .. " " .. message)
         end
     end
 end)
@@ -117,17 +117,20 @@ function printMessageToDebugChat(output)
 end
 
 local function formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage, channel)
-    local link = "|cffffc0c0|Hplayer:" .. sender .. "|h[" .. sender .. "]|h|r:"
+    local playerNameLink = "|cffffc0c0|Hplayer:" .. sender .. "|h[" .. sender .. "]|h|r:"
     local j, k = string.find(lowerMessage, dungeonInMessage:lower())
-    local newMessage = string.sub(chatMessage, 0, j - 1) .. "|cffffc0FF" ..
+    local formattedMessage = string.sub(chatMessage, 0, j - 1) .. "|cffffc0FF" ..
             string.sub(chatMessage, j, k):upper() .. "|r" ..
             string.sub(chatMessage, k + 1)
-    local output = ""
+    local timestamp = ""
     if ns.Options.show_time_stamp_on_messages then
         local hours, minutes = GetGameTime()
-        output = "[" .. hours .. ":" .. minutes .. "] "
+        timestamp = "[" .. hours .. ":" .. minutes .. "] "
     end
-    output = output .. link .. " " .. newMessage
+    if (ns.Options.display_channel_on_all_messages) then
+        formattedMessage = formattedMessage .. " ["..channel.."]";
+    end
+    output = timestamp .. playerNameLink .. " " .. formattedMessage
     return output
 end
 
@@ -148,18 +151,18 @@ function ParseMessageCFA(sender, chatMessage, channel)
 
     -- Abort if message seen recently
     if messageHasBeenSeenRecently(chatMessage) then
-        return false
+        return false, '| Message seen recently'
     end
 
     -- Abort if XP run and XP runs are disabled
     if ns.Options.hide_XP_runs and hasXPRunTags(lowerMessage) then
-        return false
+        return false, '| Message contains disabled XP tag'
     end
 
 
     -- Abort if Cleave run and Cleave runs are disabled
     if ns.Options.hide_cleave_and_AOE_runs and hasCleaveTags(lowerMessage) then
-        return false
+        return false, '| Message contains disabled Cleave tag'
     end
 
     -- Abort if in full group
@@ -169,19 +172,18 @@ function ParseMessageCFA(sender, chatMessage, channel)
             printMessageToOutputChat("If you still wish to look for LFM request this can be toggled in the settings")
             hasWarnedAboutFullGroup = true
         end
-        return false
+        return false, '| Disabled while in full group'
     end
 
+    -- Abort if doesn't contain LFM or LFG + option/partial group
+    if (not hasLfmOrLfg(lowerMessage)) then
+        return false, '| Message does not contain LFM or LFG with fitting options'
+    end
 
     -- Abort if message does not contain a relevant dungeon
     local dungeonInMessage = HasDungeonAbbreviationCFA(lowerMessage)
     if dungeonInMessage == false then
-        return false
-    end
-
-    -- Abort if message is LFG and LFG is disabled -
-    if (HasLFGTagCFA(lowerMessage) and not ns.Options.include_LFG_messages_in_addition_to_LFM) then
-        return false
+        return false, '| Message does not contain level-appropriate Dungeons keyword'
     end
 
     hasWarnedAboutFullGroup = false
@@ -189,7 +191,18 @@ function ParseMessageCFA(sender, chatMessage, channel)
     printMessageToOutputChat(ns.Utility.removeBlizzIcons(formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage, channel)))
 end
 
-
+function hasLfmOrLfg(message)
+    if HasLFMTagCFA(message) then
+        return true
+    end
+    if (HasLFGTagCFA(message) and ns.Options.include_LFG_messages_in_addition_to_LFM) then
+        return true
+    end
+    if (HasLFGTagCFA(message) and (GetNumGroupMembers()>1 and GetNumGroupMembers()<5)) then
+        return true
+    end
+    return false
+end
 
 function HasLFMTagCFA(text)
     local lfmTags = {
