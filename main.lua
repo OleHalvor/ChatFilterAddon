@@ -182,15 +182,58 @@ function messageHasBeenSeenRecently(sender, message)
     for _, messageEntry in ipairs(recentlySeenMessagesQueue) do
         if messageEntry.sender == sender then
             local distance = levenshteinDistance(messageEntry.text:lower(), lowerMessage)
-            if distance <= 3 then
-                if distance > 0 then
-                    print("Message is similar to a recent message (distance " .. distance .. "): " .. message .. "| from |" .. sender)
-                end
+            if distance <= 10 then
+                --if distance > 0 then
+                --    print("Message is similar to a recent message (distance " .. distance .. "): " .. message .. "| from |" .. sender)
+                --end
                 return true
             end
         end
     end
     return false
+end
+
+function playerClassFitsRole(playerClass, role)
+    local classRoles = {
+        Mage = {"DPS", "Caster"},
+        Hunter = {"DPS"},
+        Warlock = {"DPS", "Caster"},
+        Warrior = {"DPS", "Tank", "Melee"},
+        Shaman = {"DPS", "Healer", "Caster", "Melee"},
+        Paladin = {"DPS", "Tank", "Healer", "Caster", "Melee"},
+        Druid = {"DPS", "Tank", "Healer", "Caster", "Melee"},
+        Priest = {"DPS", "Healer", "Caster"}
+    }
+
+    if classRoles[playerClass] then
+        for _, classRole in ipairs(classRoles[playerClass]) do
+            if classRole == role then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
+function getRolesFromMessage(message)
+    local roleKeywords = {
+        DPS = {"dps", "dd"},
+        Healer = {"heal", "healer", "heals"},
+        Tank = {"tank", "mt"},
+        Caster = {"caster"},
+        Melee = {"melee"}
+    }
+
+    local rolesInMessage = {}
+    for role, keywords in pairs(roleKeywords) do
+        for _, keyword in ipairs(keywords) do
+            if message:lower():find(keyword) then
+                rolesInMessage[role] = true
+            end
+        end
+    end
+    return rolesInMessage
 end
 
 
@@ -235,6 +278,22 @@ function ParseMessageCFA(sender, chatMessage, channel)
     if dungeonInMessage == false then
         return false, '| Message does not contain level-appropriate Dungeons keyword'
     end
+
+    local rolesInMessage = getRolesFromMessage(lowerMessage)
+    local playerClass = UnitClass("player")
+
+    local fitsAtLeastOneRole = false
+    for role, _ in pairs(rolesInMessage) do
+        if playerClassFitsRole(playerClass, role) then
+            fitsAtLeastOneRole = true
+            break
+        end
+    end
+
+    if not fitsAtLeastOneRole and next(rolesInMessage) ~= nil then
+        return false, '| Player class does not fit any of the roles in the message'
+    end
+
 
     hasWarnedAboutFullGroup = false
     pushToMessageList(sender, chatMessage)
