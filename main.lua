@@ -27,7 +27,10 @@ local function findChatFrameByName(name)
 end
 
 
-
+local function normalizeSenderName(sender)
+    local normalizedSender = sender:match("^[^-]+")
+    return normalizedSender
+end
 
 local function printMessageList()
     print('printing message list: ')
@@ -36,15 +39,16 @@ local function printMessageList()
     end
 end
 
-local function pushToMessageList(message)
+local function pushToMessageList(sender, message)
     -- Remove oldest message if queue is full
     if #recentlySeenMessagesQueue >= messageQueueMaxSize then
         table.remove(recentlySeenMessagesQueue, 1)
     end
 
-    -- Add new message with timestamp
-    table.insert(recentlySeenMessagesQueue, { text = message, timestamp = time() })
+    -- Add new message with timestamp and sender
+    table.insert(recentlySeenMessagesQueue, { sender = normalizeSenderName(sender), text = message, timestamp = time() })
 end
+
 
 local function removeExpiredMessages()
     while #recentlySeenMessagesQueue > 0 and (time() - recentlySeenMessagesQueue[1].timestamp) > messageTimeout do
@@ -117,6 +121,7 @@ function printMessageToDebugChat(output)
 end
 
 local function formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage, channel)
+    sender = normalizeSenderName(sender)
     local playerNameLink = "|cffffc0c0|Hplayer:" .. sender .. "|h[" .. sender .. "]|h|r:"
     local j, k = string.find(lowerMessage, dungeonInMessage:lower())
     local formattedMessage = string.sub(chatMessage, 0, j - 1) .. "|cffffc0FF" ..
@@ -134,23 +139,68 @@ local function formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage
     return output
 end
 
-function messageHasBeenSeenRecently(message)
+local function levenshteinDistance(str1, str2)
+    local len1 = #str1
+    local len2 = #str2
+    local matrix = {}
+    local cost = 0
+
+    -- initialize matrix
+    for i = 0, len1 do
+        matrix[i] = {[0] = i}
+    end
+    for j = 0, len2 do
+        matrix[0][j] = j
+    end
+
+    -- calculate distances
+    for i = 1, len1 do
+        for j = 1, len2 do
+            if str1:sub(i, i) == str2:sub(j, j) then
+                cost = 0
+            else
+                cost = 1
+            end
+            matrix[i][j] = math.min(matrix[i-1][j] + 1, matrix[i][j-1] + 1, matrix[i-1][j-1] + cost)
+        end
+    end
+
+    return matrix[len1][len2]
+end
+
+
+
+
+function messageHasBeenSeenRecently(sender, message)
     removeExpiredMessages()
 
-    for i, messageEntry in ipairs(recentlySeenMessagesQueue) do
-        if messageEntry.text == message then
-            return true
+    sender = normalizeSenderName(sender)
+
+    -- Convert message to lower case for case-insensitive comparison
+    local lowerMessage = message:lower()
+
+    for _, messageEntry in ipairs(recentlySeenMessagesQueue) do
+        if messageEntry.sender == sender then
+            local distance = levenshteinDistance(messageEntry.text:lower(), lowerMessage)
+            if distance <= 3 then
+                if distance > 0 then
+                    print("Message is similar to a recent message (distance " .. distance .. "): " .. message .. "| from |" .. sender)
+                end
+                return true
+            end
         end
     end
     return false
 end
+
+
 
 -- Parses chat messages and prints it if it meets criteria
 function ParseMessageCFA(sender, chatMessage, channel)
     local lowerMessage = chatMessage:lower()
 
     -- Abort if message seen recently
-    if messageHasBeenSeenRecently(chatMessage) then
+    if messageHasBeenSeenRecently(sender, chatMessage) then
         return false, '| Message seen recently'
     end
 
@@ -187,7 +237,7 @@ function ParseMessageCFA(sender, chatMessage, channel)
     end
 
     hasWarnedAboutFullGroup = false
-    pushToMessageList(chatMessage)
+    pushToMessageList(sender, chatMessage)
     printMessageToOutputChat(ns.Utility.removeBlizzIcons(formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage, channel)))
 end
 
