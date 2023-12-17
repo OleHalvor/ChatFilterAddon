@@ -168,21 +168,13 @@ local function hasCleaveTags(message)
     return false
 end
 
-local Frame = CreateFrame("frame")
-Frame:RegisterEvent("CHAT_MSG_CHANNEL")
-Frame:SetScript("OnEvent", function(_, event, ...)
-    if (event == "CHAT_MSG_CHANNEL") then
-        local message, player, _, _, _, _, _, _, channelName = ...
-        local lfmSend, reason = ParseMessageCFA(player, message, channelName, true)
-        if (lfmSend == false and ns.Options.DEBUG_MODE) then
-            printMessageToDebugChat(reason .. " " .. message)
-        end
-    end
-end)
 
-ChatFrame_AddMessageEventFilter("CHAT_MSG_CHANNEL", function(frame, event, message, sender, ...)
-    local _, _, _, _, _, _, _, _, channelName = ...
-    local lfmSend, reason = ParseMessageCFA(sender, message, channelName, false)
+ChatFrame_AddMessageEventFilter("CHAT_MSG_CHANNEL", function(_, event, ...)
+    local message, player, _, _, _, _, _, _, channelName = ...
+    local lfmSend, reason = ParseMessageCFA(player, message, channelName, true)
+    if (lfmSend == false and ns.Options.DEBUG_MODE) then
+        printMessageToDebugChat(reason .. " " .. message)
+    end
     if (lfmSend == true) then
         return true
     end
@@ -217,7 +209,7 @@ end
 
 local function formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage, channel)
     sender = normalizeSenderName(sender)
-    local playerNameLink = "|cffffc0c0|Hplayer:" .. sender .. "|h[" .. sender .. "]|h|r:"
+    local playerNameLink = "|cffffc0c0|Hplayer:" .. sender .. "|h[" .. sender .. "]|h|r"
     local j, k = string.find(lowerMessage, dungeonInMessage:lower())
     local formattedMessage = string.sub(chatMessage, 0, j - 1) .. "|cffffc0FF" ..
             string.sub(chatMessage, j, k):upper() .. "|r" ..
@@ -227,10 +219,11 @@ local function formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage
         local hours, minutes = GetGameTime()
         timestamp = "[" .. hours .. ":" .. minutes .. "] "
     end
+    output = timestamp .. playerNameLink
     if (ns.Options.display_channel_on_all_messages) then
-        formattedMessage = formattedMessage .. " ["..channel.."]";
+        output = output .. " ["..channel.."]";
     end
-    output = timestamp .. playerNameLink .. " " .. formattedMessage
+    output = output .. ": " .. formattedMessage
     return output
 end
 
