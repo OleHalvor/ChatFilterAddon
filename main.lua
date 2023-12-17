@@ -8,13 +8,97 @@ local recentlySeenMessagesQueue = {}
 
 local messageQueueMaxSize = 1000  -- Maximum number of messages in the queue
 local messageTimeout = 240      -- Timeout in seconds for each message
-local outputWindowName = "p"
+local outputWindowName = "General"
 local debugWindowName = "debug"
 
 disabledDungeons = {} -- Manual declaration if needed
 local DungeonList = {} -- will be filled
 local Dungeons = {} -- will be filled
 local hasWarnedAboutFullGroup = false
+
+-- Add new constants for dynamic adjustments
+local MIN_LEVENSHTEIN_DISTANCE = 0    -- Minimum allowed Levenshtein distance
+local MAX_LEVENSHTEIN_DISTANCE = 20   -- Maximum allowed Levenshtein distance
+local MIN_MESSAGE_TIMEOUT = 30       -- Minimum message timeout in seconds
+local MAX_MESSAGE_TIMEOUT = 240       -- Maximum message timeout in seconds
+local LOWER_MESSAGE_RATE = 1    -- Lower limit of messages per minute (e.g., 6 messages/min)
+local UPPER_MESSAGE_RATE = 30   -- Upper limit of messages per minute (e.g., 60 messages/min)
+
+local messageTimestamps = {}  -- List to store timestamps of incoming messages
+
+local function cleanupOldTimestamps()
+    local currentTime = time()
+    while #messageTimestamps > 0 and (currentTime - messageTimestamps[1]) > 240 do
+        table.remove(messageTimestamps, 1)
+    end
+end
+
+-- Function to calculate current message rate per minute
+local function getCurrentMessageRate()
+    cleanupOldTimestamps()
+    local messageCount = #messageTimestamps
+    return (messageCount / 2)  -- Convert to messages per minute
+end
+
+-- Function to scale a value based on current message rate
+local function scaleValue(minValue, maxValue, lowerRate, upperRate, currentRate)
+    local rateFraction = (currentRate - lowerRate) / (upperRate - lowerRate)
+    rateFraction = math.min(math.max(rateFraction, 0), 1)  -- Clamp between 0 and 1
+    return minValue + (maxValue - minValue) * rateFraction
+end
+
+-- Adjust the levenshteinDistance requirement dynamically
+local function getDynamicLevenshteinDistance()
+    local currentRate = getCurrentMessageRate()
+    return scaleValue(MIN_LEVENSHTEIN_DISTANCE, MAX_LEVENSHTEIN_DISTANCE, LOWER_MESSAGE_RATE, UPPER_MESSAGE_RATE, currentRate)
+end
+
+-- Adjust the message timeout dynamically
+local function getDynamicMessageTimeout()
+    local currentRate = getCurrentMessageRate()
+    return scaleValue(MIN_MESSAGE_TIMEOUT, MAX_MESSAGE_TIMEOUT, LOWER_MESSAGE_RATE, UPPER_MESSAGE_RATE, currentRate)
+end
+
+local hasJoinedChannels = false
+-- List of channel names to join and hide
+local channelsToJoin = {"world", "global", "lfg", "lfm", "lookingforgroup", "lookingformore"}
+
+-- Function to check if the player is already in the channel
+local function IsPlayerInChannel(channelName)
+    local channels = {GetChannelList()}
+    for i = 1, #channels, 3 do
+        if channels[i+1]:lower() == channelName:lower() then
+            return true
+        end
+    end
+    return false
+end
+
+-- Function to hide a channel from all chat windows
+local function HideChannelFromAllChatWindows(channelName)
+    for i = 1, NUM_CHAT_WINDOWS do
+        local chatFrame = _G["ChatFrame"..i]
+        ChatFrame_RemoveChannel(chatFrame, channelName)
+    end
+end
+
+function joinChannels()
+    print("Joining LFM channels in the background")
+    if hasJoinedChannels then
+        return false
+    end
+    hasJoinedChannels = true
+    for _, channelName in ipairs(channelsToJoin) do
+        if not IsPlayerInChannel(channelName) then
+            JoinChannelByName(channelName)
+            hasJoinedChannels = true
+            HideChannelFromAllChatWindows(channelName)
+        end
+    end
+end
+
+
+
 
 local function findChatFrameByName(name)
     for i = 1, NUM_CHAT_WINDOWS do
@@ -44,17 +128,20 @@ local function pushToMessageList(sender, message)
     if #recentlySeenMessagesQueue >= messageQueueMaxSize then
         table.remove(recentlySeenMessagesQueue, 1)
     end
-
+    cleanupOldTimestamps()
     -- Add new message with timestamp and sender
     table.insert(recentlySeenMessagesQueue, { sender = normalizeSenderName(sender), text = message, timestamp = time() })
+    table.insert(messageTimestamps, time())
 end
 
 
 local function removeExpiredMessages()
-    while #recentlySeenMessagesQueue > 0 and (time() - recentlySeenMessagesQueue[1].timestamp) > messageTimeout do
+    local dynamicMessageTimeout = getDynamicMessageTimeout()
+    while #recentlySeenMessagesQueue > 0 and (time() - recentlySeenMessagesQueue[1].timestamp) > dynamicMessageTimeout do
         table.remove(recentlySeenMessagesQueue, 1)
     end
 end
+
 
 
 
@@ -168,30 +255,25 @@ local function levenshteinDistance(str1, str2)
     return matrix[len1][len2]
 end
 
-
-
-
 function messageHasBeenSeenRecently(sender, message)
     removeExpiredMessages()
 
     sender = normalizeSenderName(sender)
-
-    -- Convert message to lower case for case-insensitive comparison
     local lowerMessage = message:lower()
+    local dynamicLevenshteinDistance = getDynamicLevenshteinDistance()
 
     for _, messageEntry in ipairs(recentlySeenMessagesQueue) do
         if messageEntry.sender == sender then
             local distance = levenshteinDistance(messageEntry.text:lower(), lowerMessage)
-            if distance <= 10 then
-                --if distance > 0 then
-                --    print("Message is similar to a recent message (distance " .. distance .. "): " .. message .. "| from |" .. sender)
-                --end
+            if distance <= dynamicLevenshteinDistance then
                 return true
             end
         end
     end
     return false
 end
+
+-- todo: Velg chat vindu fra options...
 
 function playerClassFitsRole(playerClass, role)
     local classRoles = {
@@ -240,6 +322,11 @@ end
 
 -- Parses chat messages and prints it if it meets criteria
 function ParseMessageCFA(sender, chatMessage, channel)
+    if not hasJoinedChannels then
+        joinChannels()
+    end
+
+
     local lowerMessage = chatMessage:lower()
 
     -- Abort if message seen recently
@@ -270,11 +357,14 @@ function ParseMessageCFA(sender, chatMessage, channel)
 
     -- Abort if doesn't contain LFM or LFG + option/partial group
     if (not hasLfmOrLfg(lowerMessage)) then
-        return false, '| Message does not contain LFM or LFG with fitting options'
+        -- Allow messages without lfg/lfm is there are very few messages
+        if not (getCurrentMessageRate() <= LOWER_MESSAGE_RATE) then
+            return false, '| Message does not contain LFM or LFG with fitting options'
+        end
     end
 
     -- Abort if message does not contain a relevant dungeon
-    local dungeonInMessage = HasDungeonAbbreviationCFA(lowerMessage)
+    local dungeonInMessage = HasLevelAppropriateDungeonAbbreviationCFA(lowerMessage)
     if dungeonInMessage == false then
         return false, '| Message does not contain level-appropriate Dungeons keyword'
     end
@@ -291,23 +381,24 @@ function ParseMessageCFA(sender, chatMessage, channel)
     end
 
     if not fitsAtLeastOneRole and next(rolesInMessage) ~= nil then
-        return false, '| Player class does not fit any of the roles in the message'
+        -- Allow messages without lfg/lfm is there are very few messages
+        if not (getCurrentMessageRate() <= LOWER_MESSAGE_RATE) then
+            return false, '| Player class does not fit any of the roles in the message'
+        end
     end
 
-
-    hasWarnedAboutFullGroup = false
     pushToMessageList(sender, chatMessage)
     printMessageToOutputChat(ns.Utility.removeBlizzIcons(formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage, channel)))
 end
 
 function hasLfmOrLfg(message)
-    if HasLFMTagCFA(message) then
+    if HasLFMTagCFA(message) and GetNumGroupMembers()<=1 then -- alone, looking to join group
         return true
     end
-    if (HasLFGTagCFA(message) and ns.Options.include_LFG_messages_in_addition_to_LFM) then
+    if (HasLFGTagCFA(message) and ns.Options.include_LFG_messages_in_addition_to_LFM) then -- alone, but allowing LFG
         return true
     end
-    if (HasLFGTagCFA(message) and (GetNumGroupMembers()>1 and GetNumGroupMembers()<5)) then
+    if (HasLFGTagCFA(message) and (GetNumGroupMembers()>1 and GetNumGroupMembers()<5)) then -- In partial party, look for more people
         return true
     end
     return false
@@ -341,9 +432,7 @@ function HasLFGTagCFA(text)
     return false
 end
 
-
-
-function HasDungeonAbbreviationCFA(chatMessage)
+function HasLevelAppropriateDungeonAbbreviationCFA(chatMessage)
     local lowerChatMessage = chatMessage:lower()
     local level = UnitLevel("player")
     if (not ns.Options.include_dungeons_outside_of_level_range) then
