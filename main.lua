@@ -173,10 +173,18 @@ Frame:RegisterEvent("CHAT_MSG_CHANNEL")
 Frame:SetScript("OnEvent", function(_, event, ...)
     if (event == "CHAT_MSG_CHANNEL") then
         local message, player, _, _, _, _, _, _, channelName = ...
-        local lfmSend, reason = ParseMessageCFA(player, message, channelName)
+        local lfmSend, reason = ParseMessageCFA(player, message, channelName, true)
         if (lfmSend == false and ns.Options.DEBUG_MODE) then
             printMessageToDebugChat(reason .. " " .. message)
         end
+    end
+end)
+
+ChatFrame_AddMessageEventFilter("CHAT_MSG_CHANNEL", function(frame, event, message, sender, ...)
+    local _, _, _, _, _, _, _, _, channelName = ...
+    local lfmSend, reason = ParseMessageCFA(sender, message, channelName, false)
+    if (lfmSend == true) then
+        return true
     end
 end)
 
@@ -321,7 +329,7 @@ end
 
 
 -- Parses chat messages and prints it if it meets criteria
-function ParseMessageCFA(sender, chatMessage, channel)
+function ParseMessageCFA(sender, chatMessage, channel, send_message)
     if not hasJoinedChannels then
         joinChannels()
     end
@@ -387,8 +395,12 @@ function ParseMessageCFA(sender, chatMessage, channel)
         end
     end
 
-    pushToMessageList(sender, chatMessage)
-    printMessageToOutputChat(ns.Utility.removeBlizzIcons(formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage, channel)))
+    if (send_message) then
+        pushToMessageList(sender, chatMessage)
+        printMessageToOutputChat(ns.Utility.removeBlizzIcons(formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage, channel)))
+    end
+
+    return true
 end
 
 function hasLfmOrLfg(message)
