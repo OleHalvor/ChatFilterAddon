@@ -7,7 +7,6 @@ local addon, ns = ...
 local recentlySeenMessagesQueue = {}
 
 local messageQueueMaxSize = 1000  -- Maximum number of messages in the queue
-local messageTimeout = 240      -- Timeout in seconds for each message
 local outputWindowName = "General"
 local debugWindowName = "debug"
 
@@ -21,14 +20,38 @@ local MIN_LEVENSHTEIN_DISTANCE = 0    -- Minimum allowed Levenshtein distance
 local MAX_LEVENSHTEIN_DISTANCE = 20   -- Maximum allowed Levenshtein distance
 local MIN_MESSAGE_TIMEOUT = 30       -- Minimum message timeout in seconds
 local MAX_MESSAGE_TIMEOUT = 240       -- Maximum message timeout in seconds
-local LOWER_MESSAGE_RATE = 1    -- Lower limit of messages per minute (e.g., 6 messages/min)
-local UPPER_MESSAGE_RATE = 30   -- Upper limit of messages per minute (e.g., 60 messages/min)
+local MIN_MESSAGE_LENGTH = 256 -- limit for when RATE is minimum
+local MAX_MESSAGE_LENGTH = 40
+
+local LOWER_MESSAGE_RATE = 2    -- Lower limit of messages per minute
+local UPPER_MESSAGE_RATE = 30   -- Upper limit of messages per minute
+local MESSAGE_RATE_TIMEFRAME = 2 -- minutes
+local AVERAGE_MESSAGE_RATE = (LOWER_MESSAGE_RATE + UPPER_MESSAGE_RATE) / 2 -- Average of lower and upper limits
+
+local TOTAL_INITIAL_MESSAGES = AVERAGE_MESSAGE_RATE * MESSAGE_RATE_TIMEFRAME -- Total messages in the timeframe
 
 local messageTimestamps = {}  -- List to store timestamps of incoming messages
 
+local function initializeMessageTimestamps()
+    local currentTime = time()
+    local intervalSeconds = (MESSAGE_RATE_TIMEFRAME * 60) / TOTAL_INITIAL_MESSAGES
+
+    for i = 1, TOTAL_INITIAL_MESSAGES do
+        local timestamp = currentTime - (intervalSeconds * (TOTAL_INITIAL_MESSAGES - i))
+        table.insert(messageTimestamps, timestamp)
+    end
+end
+
+initializeMessageTimestamps()
+
+local function cleanMessage(message)
+    return message:gsub("[^a-zA-Z0-9%s%p]", "")
+end
+
+
 local function cleanupOldTimestamps()
     local currentTime = time()
-    while #messageTimestamps > 0 and (currentTime - messageTimestamps[1]) > 240 do
+    while #messageTimestamps > 0 and (currentTime - messageTimestamps[1]) > (MESSAGE_RATE_TIMEFRAME*60) do
         table.remove(messageTimestamps, 1)
     end
 end
@@ -36,8 +59,7 @@ end
 -- Function to calculate current message rate per minute
 local function getCurrentMessageRate()
     cleanupOldTimestamps()
-    local messageCount = #messageTimestamps
-    return (messageCount / 2)  -- Convert to messages per minute
+    return (#messageTimestamps / MESSAGE_RATE_TIMEFRAME)  -- Convert to messages per minute
 end
 
 -- Function to scale a value based on current message rate
@@ -172,9 +194,9 @@ end
 ChatFrame_AddMessageEventFilter("CHAT_MSG_CHANNEL", function(_, event, ...)
     local message, player, _, _, _, _, _, _, channelName = ...
     local lfmSend, reason = ParseMessageCFA(player, message, channelName, true)
-    if (lfmSend == false and ns.Options.DEBUG_MODE) then
-        printMessageToDebugChat(reason .. " " .. message)
-    end
+    --if (lfmSend == false and ns.Options.DEBUG_MODE) then
+    --    printMessageToDebugChat(reason .. " " .. message)
+    --end
     if (lfmSend == true) then
         return true
     end
@@ -267,6 +289,9 @@ function messageHasBeenSeenRecently(sender, message)
         if messageEntry.sender == sender then
             local distance = levenshteinDistance(messageEntry.text:lower(), lowerMessage)
             if distance <= dynamicLevenshteinDistance then
+                if distance > 0 and ns.Options.DEBUG_MODE then
+                    printMessageToDebugChat("Similar message. MaxDistance: " .. dynamicLevenshteinDistance .. ". Actual distance: " .. distance)
+                end
                 return true
             end
         end
@@ -319,6 +344,11 @@ function getRolesFromMessage(message)
     return rolesInMessage
 end
 
+local function getDynamicMessageLength()
+    local currentRate = getCurrentMessageRate()
+    return scaleValue(MIN_MESSAGE_LENGTH, MAX_MESSAGE_LENGTH, LOWER_MESSAGE_RATE, UPPER_MESSAGE_RATE, currentRate)
+end
+
 
 
 -- Parses chat messages and prints it if it meets criteria
@@ -326,6 +356,17 @@ function ParseMessageCFA(sender, chatMessage, channel, send_message)
     if not hasJoinedChannels then
         joinChannels()
     end
+
+    -- Check if the message length is valid
+    local dynamicMaxMessageLength = getDynamicMessageLength()
+    if string.len(chatMessage) > dynamicMaxMessageLength then
+        if ns.Options.DEBUG_MODE then
+            printMessageToDebugChat(getCurrentMessageRate() .. " length: " .. dynamicMaxMessageLength)
+            printMessageToDebugChat("Message too long based on current rate: " .. chatMessage)
+        end
+        return false, '| Message too long based on current rate'
+    end
+
 
 
     local lowerMessage = chatMessage:lower()
@@ -388,10 +429,28 @@ function ParseMessageCFA(sender, chatMessage, channel, send_message)
         end
     end
 
+    -- abort if above maximum message rate - 10% chance
+    if (getCurrentMessageRate() >= UPPER_MESSAGE_RATE) then
+        local randomNumber = math.random(1, 100)
+        if randomNumber <= 50 then
+            printMessageToDebugChat("Above limit. skipping message")
+            return false, '| More messages than maximum rate limit'
+        end
+    end
+
+    cleanedMessage = cleanMessage(chatMessage)
+    if cleanedMessage ~= chatMessage and ns.Options.DEBUG_MODE then
+        printMessageToDebugChat("message was cleaned: " .. chatMessage .. " original: " .. cleanedMessage)
+    end
+    chatMessage = cleanedMessage
+
     if (send_message) then
         pushToMessageList(sender, chatMessage)
         printMessageToOutputChat(ns.Utility.removeBlizzIcons(formatMessage(sender, chatMessage, lowerMessage, dungeonInMessage, channel)))
     end
+
+    printMessageToDebugChat("Rate: " .. getCurrentMessageRate())
+
 
     return true
 end
